@@ -114,8 +114,9 @@ class Agent_STRAWe:
     def read(self, attention_params):
         # read operation
         with tf.variable_scope("read"):
-            # ?
-            grid_pos, log_stride, log_var = tf.squeeze(attention_params)
+            grid_pos = tf.gather_nd(attention_params, [0, 0])
+            log_stride = tf.gather_nd(attention_params, [0, 1])
+            log_var = tf.gather_nd(attention_params, [0, 2])
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
