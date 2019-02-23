@@ -12,8 +12,7 @@ class Configuration:
 
     def __init__(self):
 
-        base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
+        # base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
         '''
         model parameters

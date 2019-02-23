@@ -33,7 +33,6 @@ class Feature_Extractor:
 
 
     def get_feature_representation(self):
-
         conv_filters = self.config.conv_filters
         conv_kernel_sizes = self.config.conv_kernel_sizes 
         conv_strides = self.config.conv_strides
@@ -41,15 +40,13 @@ class Feature_Extractor:
         conv_activations = self.config.conv_activations
         conv_initializer = self.config.conv_initializer()
 
-        n_denses = self.config.n_denses
-        dense_activations = self.config.dense_activations
-        dense_initializer = self.config.dense_initializer()
-        n_outputs = self.config.n_outputs
+        n_denses = self.config.fe_n_denses
+        dense_activations = self.config.fe_dense_activations
+        dense_initializer = self.config.fe_dense_initializer()
+        n_outputs = self.config.fe_n_outputs
         
         hidden_layer = self.input_frame
-        name = "Feature_Extractor"
-
-        with tf.variable_scope(name) as scope:
+        with tf.variable_scope("Feature_Extractor") as scope:
 
             for filters, kernel_size, strides, padding, activation in zip(
                 conv_filters, conv_kernel_sizes, conv_strides, conv_paddings, conv_activations):
@@ -90,30 +87,47 @@ class Agent_STRAWe:
         self.T = self.config.max_T
         self.n_actions = self.config.n_actions
 
-        commitment_plan = [0]*self.T
-        commitment_plan[0] = 1
-        self.commitment_plan = tf.convert_to_tensor(commitment_plan, dtype=tf.float32)
-        self.action_plan = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
+        with tf.variable_scope("init_agent"):
+            commitment_plan = [0]*self.T
+            commitment_plan[0] = 1
+            self.commitment_plan = tf.convert_to_tensor(commitment_plan, dtype=tf.float32)
+            self.action_plan = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
+
+            # for time_shift op
+            # (A, T)
+            _idx = tf.tile([tf.range(self.T)], [self.n_actions, 1])
+            self.mask = tf.math.less(_idx, self.T - 1)
+            self.zeros = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
+
+
+    def compute_attention_params(self, feature):
+        # compute attention parameters from feature
+        with tf.variable_scope("compute_attention_params"):
+            # (grid position, stride, variance of Gaussian filters)
+            attention_params = tf.layers.dense(feature, 3,
+                                               kernel_initializer = self.config.linear_initializer(),
+                                               name = "f_phi")
+        return attention_params
 
 
     def read(self, attention_params):
         # read operation
         with tf.variable_scope("read"):
-            ######## ?
+            # ?
             grid_pos, log_stride, log_var = tf.squeeze(attention_params)
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
 
-            K = self.config.K_filters
+            self.K = self.config.K_filters
 
-            mean_locs = np.arange(K, dtype = np.float) - K/2 -0.5
+            mean_locs = np.arange(self.K, dtype = np.float) - self.K/2 -0.5
             mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
             mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
             mean_locs = tf.expand_dims(mean_locs, axis = 0)
 
             # Fx (T, K)  
-            Fx = [[i]*K for i in range(self.T)]
+            Fx = [[i]*self.K for i in range(self.T)]
             Fx = tf.convert_to_tensor(Fx, dtype=tf.float32)
             Fx = tf.math.exp(-tf.math.truediv(tf.math.square(Fx - mean_locs), 2*var+1e-8))
             self.Fx = tf.math.truediv(Fx, tf.math.reduce_sum(Fx, axis = 0, keepdims = True))
@@ -126,15 +140,23 @@ class Agent_STRAWe:
 
 
     def intermediate_representation(self, beta_t, z_t):
+        # a two layer perceptron
         # beta_t (A, K)
         # z_t (1, ?)
+        n_hidden = self.config.ir_n_hidden
+        activation = self.config.ir_activation
+        initializer = self.config.ir_initializer()
+        n_epsilon_t = self.config.n_epsilon_t
 
-        # (K, ?) 
-        # concat
+        with tf.variable_scope("intermediate_representation"):
+            hidden_layer = tf.concat([tf.transpose(beta_t), tf.tile(z_t, [self.K, 1])], 
+                                     axis = 1)
 
+            hidden_layer = tf.layers.dense(hidden_layer, n_hidden, activation = activation, 
+                                           kernel_initializer = initializer)
 
-        # (K, ?) 
-        epsilon_t = 0
+            epsilon_t = tf.layers.dense(hidden_layer, n_epsilon_t,
+                                        kernel_initializer = initializer)
 
         return epsilon_t
 
@@ -144,7 +166,7 @@ class Agent_STRAWe:
         with tf.variable_scope("write"):
             # (K, A)
             action_patch = tf.layers.dense(epsilon_t, self.n_actions,
-                                           kernel_initializer = self.config.dense_initializer(),
+                                           kernel_initializer = self.config.linear_initializer(),
                                            name = "f_A")
             # (T, K)*(K, A) = (T, A)
             new_term = tf.linalg.matmul(self.Fx, action_patch)
@@ -155,11 +177,11 @@ class Agent_STRAWe:
 
     
     def time_shift(self, X):
-
+        # (A, T)
         X_shift = tf.roll(X, shift = 1, axis = 1)
-
-        return X_shift
-
+        # mask the last column to 0
+        mask_X_shift = tf.where(self.mask, X_shift, self.zeros)
+        return mask_X_shift
 
 
     def plans_update_and_sample(self):
@@ -171,10 +193,8 @@ class Agent_STRAWe:
         # feature of the currrent frame, (1, ?)
         z_t = self.feature_extractor.feature
 
-        # (1, 3)
-        attention_params = tf.layers.dense(z_t, 3,
-                                           kernel_initializer = self.config.dense_initializer(),
-                                           name = "f_phi")
+        # (1, 3) 
+        attention_params = self.compute_attention_params(z_t)
         # (A, K)
         beta_t = self.read(attention_params)
         # (K, ?) 
@@ -183,17 +203,19 @@ class Agent_STRAWe:
         update_term = self.write(epsilon_t)
 
         new_action_plan = self.time_shift(self.action_plan)
-
-        # To do
-        # new_action_plan = tf.mask
-
-        self.action_plan = tf.cond(g_t > 0, new_action_plan + update_term, lambda: new_action_plan)
+        self.action_plan = tf.cond(g_t > 0, 
+                                   lambda: new_action_plan + update_term, 
+                                   lambda: new_action_plan)
         
         '''
         commitment plan update
         '''
+        # To do: new commitment_plan
 
 
+        self.commitment_plan = tf.cond(g_t > 0, 
+                                       lambda: new_action_plan + update_term, 
+                                       lambda: self.time_shift(self.commitment_plan))        
 
         '''
         sample an action
