@@ -151,12 +151,14 @@ class Agent_STRAWe:
         n_epsilon_t = self.config.n_epsilon_t
 
         with tf.variable_scope("intermediate_representation"):
+            # (K, A+?)
             hidden_layer = tf.concat([tf.transpose(beta_t), tf.tile(z_t, [self.K, 1])], 
                                      axis = 1)
 
             hidden_layer = tf.layers.dense(hidden_layer, n_hidden, activation = activation, 
                                            kernel_initializer = initializer)
 
+            # (K, ?)
             epsilon_t = tf.layers.dense(hidden_layer, n_epsilon_t,
                                         kernel_initializer = initializer)
 
@@ -165,6 +167,7 @@ class Agent_STRAWe:
 
     def write(self, epsilon_t):
         # write operation
+        # epsilon_t (K, ?)
         with tf.variable_scope("write"):
             # (K, A)
             action_patch = tf.layers.dense(epsilon_t, self.n_actions,
@@ -191,13 +194,19 @@ class Agent_STRAWe:
 
     def new_commitment_plan(self, attention_params, epsilon_t):
         # generate new commitment plan when g_t = 1
+
+        # To do: new commitment_plan
+
         # (1, 3)
         attention_params
         # (K, ?) 
         epsilon_t
 
-        # To do: new commitment_plan
-
+        # with tf.variable_scope("compute_attention_params_c"):
+        #     # (grid position, stride, variance of Gaussian filters)
+        #     attention_params_c = tf.layers.dense(feature, 3,
+        #                                          kernel_initializer = self.config.linear_initializer(),
+        #                                          name = "f_c")
 
         new_commit_plan = None
 
