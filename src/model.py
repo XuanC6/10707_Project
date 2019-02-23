@@ -80,8 +80,9 @@ class Agent_STRAWe:
         self.config = config
         self.feature_extractor = Feature_Extractor(config)
 
-        self.initialize_plans()
-        self.plans_update_and_sample()
+        with tf.variable_scope("Agent_STRAWe"):
+            self.initialize_plans()
+            self.plans_update()
 
 
     def initialize_plans(self):
@@ -96,7 +97,7 @@ class Agent_STRAWe:
 
             # for time_shift op
             # (A, T)
-            _idx = tf.tile([tf.range(self.T)], [self.n_actions, 1])
+            _idx = tf.manip.tile([tf.range(self.T)], [self.n_actions, 1])
             self.mask = tf.math.less(_idx, self.T - 1)
             self.zeros = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
 
@@ -152,7 +153,7 @@ class Agent_STRAWe:
 
         with tf.variable_scope("intermediate_representation"):
             # (K, A+?)
-            hidden_layer = tf.concat([tf.transpose(beta_t), tf.tile(z_t, [self.K, 1])], 
+            hidden_layer = tf.concat([tf.linalg.transpose(beta_t), tf.manip.tile(z_t, [self.K, 1])], 
                                      axis = 1)
 
             hidden_layer = tf.layers.dense(hidden_layer, n_hidden, activation = activation, 
@@ -174,9 +175,8 @@ class Agent_STRAWe:
                                            kernel_initializer = self.config.linear_initializer(),
                                            name = "f_A")
             # (T, K)*(K, A) = (T, A)
-            new_term = tf.linalg.matmul(self.Fx, action_patch)
-            # (A, T)
-            update_term = tf.linalg.transpose(new_term)
+            # transpose -> (A, T)
+            update_term = tf.linalg.transpose(tf.linalg.matmul(self.Fx, action_patch))
 
         return update_term
 
@@ -194,26 +194,58 @@ class Agent_STRAWe:
 
     def new_commitment_plan(self, attention_params, epsilon_t):
         # generate new commitment plan when g_t = 1
+        '''
+        !!! Based on my own understanding
+        '''
+        # (1, ?)       
+        feature = tf.concat([tf.manip.reshape(epsilon_t, [1, -1]), attention_params], axis = 1)
 
-        # To do: new commitment_plan
+        with tf.variable_scope("compute_attention_params_c"):
+            # (grid position, stride, variance of Gaussian filters)
+            attention_params_c = tf.layers.dense(feature, 3,
+                                                 kernel_initializer = self.config.linear_initializer(),
+                                                 name = "f_c")
 
-        # (1, 3)
-        attention_params
-        # (K, ?) 
-        epsilon_t
+        with tf.variable_scope("write_commit"):
+            grid_pos = tf.gather_nd(attention_params_c, [0, 0])
+            log_stride = tf.gather_nd(attention_params_c, [0, 1])
+            log_var = tf.gather_nd(attention_params_c, [0, 2])
 
-        # with tf.variable_scope("compute_attention_params_c"):
-        #     # (grid position, stride, variance of Gaussian filters)
-        #     attention_params_c = tf.layers.dense(feature, 3,
-        #                                          kernel_initializer = self.config.linear_initializer(),
-        #                                          name = "f_c")
+            stride = tf.math.exp(log_stride)
+            var = tf.math.exp(log_var)
 
-        new_commit_plan = None
+            mean_locs = np.arange(1, dtype = np.float) - 1/2 -0.5
+            mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
+            mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
+            mean_locs = tf.expand_dims(mean_locs, axis = 0)
+
+            # Fx (T, 1)  
+            Fx = [[i]*1 for i in range(self.T)]
+            Fx = tf.convert_to_tensor(Fx, dtype=tf.float32)
+            Fx = tf.math.exp(-tf.math.truediv(tf.math.square(Fx - mean_locs), 2*var+1e-8))
+            Fx = tf.math.truediv(Fx, tf.math.reduce_sum(Fx, axis = 0, keepdims = True))
+
+            e = tf.convert_to_tensor([[self.config.e]], dtype=tf.float32)
+
+            # (T, 1)*(1, 1)
+            # transpose -> (1, T)
+            commit_plan_logits = tf.linalg.transpose(tf.linalg.matmul(Fx, e))
+
+            bias = tf.get_variable("commit_bias", shape=[1, self.T])
+            commit_plan_logits = commit_plan_logits + bias
+            '''
+            !!! Based on my own understanding
+            '''
+            commit_plan_probs = tf.math.softmax(commit_plan_logits - tf.math.reduce_max(commit_plan_logits))
+            pos = tf.math.argmax(commit_plan_probs, axis = 1)
+
+        # (1, T)
+        new_commit_plan = tf.one_hot(pos, self.T)
 
         return new_commit_plan
 
 
-    def plans_update_and_sample(self):
+    def plans_update(self):
         '''
         action plan update
         '''
@@ -242,9 +274,4 @@ class Agent_STRAWe:
         # To do: new commitment_plan
         self.commitment_plan = tf.cond(g_t > 0, 
                                        lambda: self.new_commitment_plan(attention_params, epsilon_t),
-                                       lambda: self.time_shift(self.commitment_plan)) 
-
-        '''
-        sample an action
-        '''
-        # self.action = sample_from(self.action_plan[:,0])
+                                       lambda: self.time_shift(self.commitment_plan))
