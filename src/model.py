@@ -8,6 +8,9 @@ base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 utils_dir = os.path.join(base_dir, "utils")
 sys.path.append(utils_dir)
 
+'''
+Define models and agent
+'''
 
 class Feature_Extractor:
     '''
@@ -72,7 +75,7 @@ class Feature_Extractor:
 
 
 
-class STRAW:
+class Agent_STRAWe:
     '''
     Strategic Attentive Writer
     '''

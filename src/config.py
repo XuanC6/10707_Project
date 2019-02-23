@@ -3,6 +3,10 @@ import os
 import tensorflow as tf
 # from model import #?
 
+'''
+All parameters and hyperparameters
+'''
+
 
 class Configuration:
 

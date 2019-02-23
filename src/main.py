@@ -7,10 +7,9 @@ import tensorflow as tf
 from trainer import Trainer
 from config import Configuration
 
-
-class Agent:
-    pass
-
+'''
+Execute training
+'''
 
 if __name__ == "__main__":
     pass
