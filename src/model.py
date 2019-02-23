@@ -81,6 +81,7 @@ class Agent_STRAWe:
         self.feature_extractor = Feature_Extractor(config)
 
         self.initialize_plans()
+        self.plans_update_and_sample()
 
 
     def initialize_plans(self):
@@ -177,11 +178,29 @@ class Agent_STRAWe:
 
     
     def time_shift(self, X):
-        # (A, T)
-        X_shift = tf.roll(X, shift = 1, axis = 1)
-        # mask the last column to 0
-        mask_X_shift = tf.where(self.mask, X_shift, self.zeros)
+        # time_shift operation
+        with tf.variable_scope("time_shift"):
+            # (A, T)
+            X_shift = tf.roll(X, shift = 1, axis = 1)
+            # mask the last column to 0
+            mask_X_shift = tf.where(self.mask, X_shift, self.zeros)
+        
         return mask_X_shift
+
+
+    def new_commitment_plan(self, attention_params, epsilon_t):
+        # generate new commitment plan when g_t = 1
+        # (1, 3)
+        attention_params
+        # (K, ?) 
+        epsilon_t
+
+        # To do: new commitment_plan
+
+
+        new_commit_plan = None
+
+        return new_commit_plan
 
 
     def plans_update_and_sample(self):
@@ -211,14 +230,11 @@ class Agent_STRAWe:
         commitment plan update
         '''
         # To do: new commitment_plan
-
-
         self.commitment_plan = tf.cond(g_t > 0, 
-                                       lambda: new_action_plan + update_term, 
-                                       lambda: self.time_shift(self.commitment_plan))        
+                                       lambda: self.new_commitment_plan(attention_params, epsilon_t),
+                                       lambda: self.time_shift(self.commitment_plan)) 
 
         '''
         sample an action
         '''
-        # action = sample_from(self.action_plan[:,0])
-        # return action
+        # self.action = sample_from(self.action_plan[:,0])
