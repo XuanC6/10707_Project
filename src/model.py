@@ -90,16 +90,25 @@ class Agent_STRAWe:
         self.n_actions = self.config.n_actions
 
         with tf.variable_scope("init_agent"):
-            commitment_plan = [0]*self.T
-            commitment_plan[0] = 1
-            self.commitment_plan = tf.convert_to_tensor(commitment_plan, dtype=tf.float32)
+            # (A, T)
             self.action_plan = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
 
-            # for time_shift op
+            commitment_plan = [0]*self.T
+            commitment_plan[0] = 1
+            # (1, T)
+            self.commitment_plan = tf.convert_to_tensor([commitment_plan], dtype=tf.int32)
+            
+            # for time_shift op of action plan
             # (A, T)
-            _idx = tf.manip.tile([tf.range(self.T)], [self.n_actions, 1])
-            self.mask = tf.math.less(_idx, self.T - 1)
-            self.zeros = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
+            _idx_action = tf.manip.tile([tf.range(self.T)], [self.n_actions, 1])
+            self.mask_action = tf.math.less(_idx_action, self.T - 1)
+            self.zeros_action = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
+
+            # for time_shift op of commitment plan
+            # (1, T)
+            _idx_commit = tf.manip.tile([tf.range(self.T)], [1, 1])
+            self.mask_commit = tf.math.less(_idx_commit, self.T - 1)
+            self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.int32)
 
 
     def compute_attention_params(self, feature):
@@ -115,9 +124,9 @@ class Agent_STRAWe:
     def read(self, attention_params):
         # read operation
         with tf.variable_scope("read"):
-            grid_pos = tf.gather_nd(attention_params, [0, 0])
-            log_stride = tf.gather_nd(attention_params, [0, 1])
-            log_var = tf.gather_nd(attention_params, [0, 2])
+            grid_pos = tf.squeeze(tf.gather_nd(attention_params, [0, 0]))
+            log_stride = tf.squeeze(tf.gather_nd(attention_params, [0, 1]))
+            log_var = tf.squeeze(tf.gather_nd(attention_params, [0, 2]))
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
@@ -181,18 +190,29 @@ class Agent_STRAWe:
         return update_term
 
     
-    def time_shift(self, X):
-        # time_shift operation
-        with tf.variable_scope("time_shift"):
+    def time_shift_action_plan(self, action_plan):
+        # time_shift operation of action plan
+        with tf.variable_scope("time_shift_action_plan"):
             # (A, T)
-            X_shift = tf.roll(X, shift = 1, axis = 1)
+            action_plan_shift = tf.roll(action_plan, shift = 1, axis = 1)
             # mask the last column to 0
-            mask_X_shift = tf.where(self.mask, X_shift, self.zeros)
+            mask_action_plan_shift = tf.where(self.mask_action, action_plan_shift, self.zeros_action)
         
-        return mask_X_shift
+        return mask_action_plan_shift
 
 
-    def new_commitment_plan(self, attention_params, epsilon_t):
+    def time_shift_commit_plan(self, commit_plan):
+        # time_shift operation of commit_plan
+        with tf.variable_scope("time_shift_commit_plan"):
+            # (1, T)
+            commit_plan_shift = tf.roll(commit_plan, shift = 1, axis = 1)
+            # mask the last column to 0
+            mask_commit_plan_shift = tf.where(self.mask_commit, commit_plan_shift, self.zeros_commit)
+        
+        return mask_commit_plan_shift
+
+
+    def generate_new_commit_plan(self, attention_params, epsilon_t):
         # generate new commitment plan when g_t = 1
         '''
         !!! Based on my own understanding
@@ -207,9 +227,9 @@ class Agent_STRAWe:
                                                  name = "f_c")
 
         with tf.variable_scope("write_commit"):
-            grid_pos = tf.gather_nd(attention_params_c, [0, 0])
-            log_stride = tf.gather_nd(attention_params_c, [0, 1])
-            log_var = tf.gather_nd(attention_params_c, [0, 2])
+            grid_pos = tf.squeeze(tf.gather_nd(attention_params_c, [0, 0]))
+            log_stride = tf.squeeze(tf.gather_nd(attention_params_c, [0, 1]))
+            log_var = tf.squeeze(tf.gather_nd(attention_params_c, [0, 2]))
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
@@ -225,6 +245,7 @@ class Agent_STRAWe:
             Fx = tf.math.exp(-tf.math.truediv(tf.math.square(Fx - mean_locs), 2*var+1e-8))
             Fx = tf.math.truediv(Fx, tf.math.reduce_sum(Fx, axis = 0, keepdims = True))
 
+            (1, 1)
             e = tf.convert_to_tensor([[self.config.e]], dtype=tf.float32)
 
             # (T, 1)*(1, 1)
@@ -240,7 +261,7 @@ class Agent_STRAWe:
             pos = tf.math.argmax(commit_plan_probs, axis = 1)
 
         # (1, T)
-        new_commit_plan = tf.one_hot(pos, self.T)
+        new_commit_plan = tf.one_hot(pos, self.T, dtype = tf.int32)
 
         return new_commit_plan
 
@@ -250,7 +271,7 @@ class Agent_STRAWe:
         action plan update
         '''
         # current state of commitment plan, scalar
-        g_t = self.gt_ph = tf.placeholder(tf.int32, shape=[], name="g_t")
+        g_t = tf.squeeze(tf.gather_nd(self.commitment_plan, [0, 0]))
         # feature of the currrent frame, (1, ?)
         z_t = self.feature_extractor.feature
 
@@ -263,15 +284,18 @@ class Agent_STRAWe:
         # (A, T)
         update_term = self.write(epsilon_t)
 
-        new_action_plan = self.time_shift(self.action_plan)
-        self.action_plan = tf.cond(g_t > 0, 
-                                   lambda: new_action_plan + update_term, 
-                                   lambda: new_action_plan)
+        new_action_plan = self.time_shift_action_plan(self.action_plan)
+        new_action_plan = tf.cond(g_t > 0, 
+                                  lambda: new_action_plan + update_term, 
+                                  lambda: new_action_plan)
+
+        self.action_plan_update_op = tf.assign(self.action_plan, new_action_plan)
         
         '''
         commitment plan update
         '''
-        # To do: new commitment_plan
-        self.commitment_plan = tf.cond(g_t > 0, 
-                                       lambda: self.new_commitment_plan(attention_params, epsilon_t),
-                                       lambda: self.time_shift(self.commitment_plan))
+        new_commitment_plan = tf.cond(g_t > 0, 
+                                      lambda: self.generate_new_commit_plan(attention_params, epsilon_t),
+                                      lambda: self.time_shift_commit_plan(self.commitment_plan))
+
+        self.commitment_plan_update_op = tf.assign(self.commitment_plan, new_commitment_plan)
