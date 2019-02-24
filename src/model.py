@@ -92,7 +92,8 @@ class Agent_STRAWe:
         with tf.variable_scope("init_agent"):
             commitment_plan = [0]*self.T
             commitment_plan[0] = 1
-            self.commitment_plan = tf.convert_to_tensor(commitment_plan, dtype=tf.float32)
+            # (1, T)
+            self.commitment_plan = tf.convert_to_tensor([commitment_plan], dtype=tf.float32)
             self.action_plan = tf.zeros(shape=[self.n_actions, self.T], dtype=tf.float32)
 
             # for time_shift op
@@ -115,9 +116,9 @@ class Agent_STRAWe:
     def read(self, attention_params):
         # read operation
         with tf.variable_scope("read"):
-            grid_pos = tf.gather_nd(attention_params, [0, 0])
-            log_stride = tf.gather_nd(attention_params, [0, 1])
-            log_var = tf.gather_nd(attention_params, [0, 2])
+            grid_pos = tf.squeeze(tf.gather_nd(attention_params, [0, 0]))
+            log_stride = tf.squeeze(tf.gather_nd(attention_params, [0, 1]))
+            log_var = tf.squeeze(tf.gather_nd(attention_params, [0, 2]))
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
@@ -207,9 +208,9 @@ class Agent_STRAWe:
                                                  name = "f_c")
 
         with tf.variable_scope("write_commit"):
-            grid_pos = tf.gather_nd(attention_params_c, [0, 0])
-            log_stride = tf.gather_nd(attention_params_c, [0, 1])
-            log_var = tf.gather_nd(attention_params_c, [0, 2])
+            grid_pos = tf.squeeze(tf.gather_nd(attention_params_c, [0, 0]))
+            log_stride = tf.squeeze(tf.gather_nd(attention_params_c, [0, 1]))
+            log_var = tf.squeeze(tf.gather_nd(attention_params_c, [0, 2]))
 
             stride = tf.math.exp(log_stride)
             var = tf.math.exp(log_var)
@@ -225,6 +226,7 @@ class Agent_STRAWe:
             Fx = tf.math.exp(-tf.math.truediv(tf.math.square(Fx - mean_locs), 2*var+1e-8))
             Fx = tf.math.truediv(Fx, tf.math.reduce_sum(Fx, axis = 0, keepdims = True))
 
+            (1, 1)
             e = tf.convert_to_tensor([[self.config.e]], dtype=tf.float32)
 
             # (T, 1)*(1, 1)
@@ -250,7 +252,9 @@ class Agent_STRAWe:
         action plan update
         '''
         # current state of commitment plan, scalar
-        g_t = self.gt_ph = tf.placeholder(tf.int32, shape=[], name="g_t")
+        g_t = tf.squeeze(tf.gather_nd(self.commitment_plan, [0, 0]))
+        # g_t = self.gt_ph = tf.placeholder(tf.int32, shape=[], name="g_t")
+
         # feature of the currrent frame, (1, ?)
         z_t = self.feature_extractor.feature
 
