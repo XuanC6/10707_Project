@@ -1,2 +1,2 @@
-# STRAWe
-Strategic Attentive Writer for Learning Macro-Actions
+# 10707 Project
+## STRAW/STRAWe: Strategic Attentive Writer for Learning Macro-Actions
