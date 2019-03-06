@@ -13,7 +13,7 @@ class Configuration:
 
     def __init__(self):
 
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
         '''
         Feature Extractor
@@ -53,11 +53,12 @@ class Configuration:
         Trainer
         '''
         self.env = 
-        self.max_episodes =
-        self.render_when_train = 
-        self.render_when_test = 
-        self.gamma = 
+        self.max_episodes = 500
+        self.render_when_train = False
+        self.render_when_test = True
+        self.gamma = 0.95
         self.commit_lambda = 
+        self.N_compute_returns = 10
 
         self.lr_actor = 
         self.lr_critic = 
@@ -68,14 +69,17 @@ class Configuration:
         self.save_interval = 
         self.test_interval = 
 
-        self.n_test_episodes = 
+        self.n_test_episodes = 10
 
         '''
         log paths
         '''
-        self.weights_path = 
-        self.pic_path = 
+        self.weight_dir = os.path.join(self.base_dir, "weight")
+        self.pic_dir = os.path.join(self.base_dir, "pic")
 
-        # if not os.path.exists(self.path):
-        #     os.makedirs(self.path)
-        # self.file_path = self.path + '/saved_data.ckpt'
+        if not os.path.exists(self.weight_dir):
+            os.makedirs(self.weight_dir)
+        if not os.path.exists(self.pic_dir):
+            os.makedirs(self.pic_dir)
+
+        self.weight_path = self.weight_dir + '/saved_weights.ckpt'
