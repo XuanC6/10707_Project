@@ -54,11 +54,11 @@ class STRAW(tf.keras.Model):
         conv_strides = self.config.conv_strides
         conv_paddings = self.config.conv_paddings
         conv_activations = self.config.conv_activations
-        conv_initializer = self.config.conv_initializer()
+        conv_initializer = self.config.conv_initializer
 
         n_denses = self.config.fe_n_denses
         dense_activations = self.config.fe_dense_activations
-        dense_initializer = self.config.fe_dense_initializer()
+        dense_initializer = self.config.fe_dense_initializer
         n_outputs = self.config.fe_n_outputs
 
         self.conv_layers = []
@@ -82,13 +82,13 @@ class STRAW(tf.keras.Model):
         '''
         other layers
         '''
-        self.atten_linear_layer = tf.keras.layers.Dense(units = 3, kernel_initializer = self.config.linear_initializer(), name = "f_phi")
+        self.atten_linear_layer = tf.keras.layers.Dense(units = 3, kernel_initializer = self.config.linear_initializer, name = "f_phi")
         self.ir_layer1 = tf.keras.layers.Dense(units = self.config.ir_n_hidden, activation = self.config.ir_activation, 
-                                                kernel_initializer = self.config.ir_initializer())
-        self.ir_layer2 = tf.keras.layers.Dense(units = self.config.n_epsilon_t, kernel_initializer = self.config.ir_initializer())
+                                                kernel_initializer = self.config.ir_initializer)
+        self.ir_layer2 = tf.keras.layers.Dense(units = self.config.n_epsilon_t, kernel_initializer = self.config.ir_initializer)
         self.write_linear_layer = tf.keras.layers.Dense(units = self.n_actions + 1, 
-                                                        kernel_initializer = self.config.linear_initializer(), name = "f_A")
-        self.atten_c_linear_layer = tf.keras.layers.Dense(units = 3, kernel_initializer = self.config.linear_initializer(), name = "f_c")
+                                                        kernel_initializer = self.config.linear_initializer, name = "f_A")
+        self.atten_c_linear_layer = tf.keras.layers.Dense(units = 3, kernel_initializer = self.config.linear_initializer, name = "f_c")
 
 
     def activate_layers(self):

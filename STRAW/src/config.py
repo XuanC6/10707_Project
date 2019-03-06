@@ -22,16 +22,16 @@ class Configuration:
         self.input_frame_width = None
         self.input_frame_channels = None
 
-        self.conv_filters = None
-        self.conv_kernel_sizes  = None
-        self.conv_strides = None
-        self.conv_paddings = None
-        self.conv_activations = None
-        self.conv_initializer = None
+        self.conv_filters = []
+        self.conv_kernel_sizes  = []
+        self.conv_strides = []
+        self.conv_paddings = []
+        self.conv_activations = "relu"
+        self.conv_initializer = "he_normal"
 
         self.fe_n_denses = None
-        self.fe_dense_activations = None
-        self.fe_dense_initializer = None
+        self.fe_dense_activations = "relu"
+        self.fe_dense_initializer = "he_normal"
         self.fe_n_outputs = None
 
         '''
@@ -39,12 +39,12 @@ class Configuration:
         '''
         self.max_T = None
         self.n_actions = None
-        self.K_filters = None
+        self.K_filters = 12
 
-        self.linear_initializer = None
+        self.linear_initializer = "he_normal"
         self.ir_n_hidden = None
-        self.ir_activation = None
-        self.ir_initializer = None
+        self.ir_activation = "relu"
+        self.ir_initializer = "he_normal"
         self.n_epsilon_t = None
 
         self.e = None
@@ -60,11 +60,11 @@ class Configuration:
         self.commit_lambda = 
         self.N_compute_returns = 10
 
-        self.lr_actor = 
-        self.lr_critic = 
+        self.lr_actor = 0.001
+        self.lr_critic = 0.001
 
-        self.optimizer_actor = 
-        self.optimizer_critic = 
+        self.optimizer_actor = tf.keras.optimizers.Adam
+        self.optimizer_critic = tf.keras.optimizers.Adam
 
         self.save_interval = 
         self.test_interval = 
