@@ -277,7 +277,7 @@ class STRAW(tf.keras.Model):
         # (A + 1, T)
         update_term = self.write(epsilon_t)
 
-        new_action_plan_v = self.time_shift_action_v_plan()
+        new_action_plan_v = self.time_shift_action_plan_v()
 
         '''
         plans update
@@ -306,4 +306,4 @@ class STRAW(tf.keras.Model):
         # tensor
         commit_score = self.commitment_plan[0]
 
-        return action, action_score, state_value_tensor, state_value, commit_score
+        return action, action_score, state_value_tensor, state_value, commit_score, g_t

@@ -6,6 +6,10 @@ import numpy as np
 import tensorflow as tf
 from datetime import datetime
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from model import STRAW
 
 tf.enable_eager_execution()
@@ -25,6 +29,8 @@ class Trainer:
         self.render_when_train = config.render_when_train
         self.render_when_test = config.render_when_test
         self.gamma = config.gamma
+        self.commit_lambda = config.commit_lambda
+        self.N_compute_returns = config.N_compute_returns
 
         self.optimizer_actor = config.optimizer_actor(config.lr_actor)
         self.optimizer_critic = config.optimizer_critic(config.lr_critic)
@@ -38,16 +44,16 @@ class Trainer:
         self.test_episodes = []
         self.n_test_episodes = config.n_test_episodes
 
-        self.weights_path = config.weights_path
-        self.pic_path = config.pic_path
+        self.weight_path = config.weight_path
+        self.pic_dir = config.pic_dir
 
 
     def train(self):
 
         n_episodes = 0
 
-        if exist weights:
-            self.agent.load_weights(self.weights_path)
+        if os.path.isfile(self.weight_path + '.index'):
+            self.agent.load_weights(self.weight_path)
             print('Data Restored')
             print(datetime.now())
         else:
@@ -59,7 +65,7 @@ class Trainer:
             with tf.GradientTape() as tape:
                 # 1. Generate an episode
                 n_episodes += 1
-                rewards, action_scores, state_value_tensors, state_values, commit_scores \
+                rewards, action_scores, state_value_tensors, state_values, commit_scores, g_ts \
                                                  = self.generate_episode(self.render_when_train)
 
                 # 2. Compute the returns G(N_step)
@@ -78,7 +84,7 @@ class Trainer:
             
             # Save data or do test
             if n_episodes % self.save_interval == 0:
-                self.agent.save_weights(self.weights_path)
+                self.agent.save_weights(self.weight_path)
                 
             if n_episodes % self.test_interval == 0:
                 print(datetime.now())
@@ -89,7 +95,7 @@ class Trainer:
 
         print(datetime.now())
         print('training finished')
-        self.agent.save_weights(self.weights_path)
+        self.agent.save_weights(self.weight_path)
 
 
     def generate_episode(self, render):
@@ -99,6 +105,7 @@ class Trainer:
         state_value_tensors = []
         state_values = []
         commit_scores = []
+        g_ts = []
 
         n_steps = 0
 
@@ -110,7 +117,7 @@ class Trainer:
             self.env.render()
         
         while True:
-            action, action_score, state_value_tensor, state_value, commit_score = self.agent(obs)
+            action, action_score, state_value_tensor, state_value, commit_score, g_t = self.agent(obs)
             
             n_steps += 1
             next_obs, reward, done, _ = self.env.step(action)
@@ -122,6 +129,7 @@ class Trainer:
             state_value_tensors.append(state_value_tensor)
             state_values.append(state_value)
             commit_scores.append(commit_score)
+            g_ts.append(g_t)
 
             obs = next_obs
             
@@ -129,7 +137,7 @@ class Trainer:
             if done:
                 break
 
-        return rewards, action_scores, state_value_tensors, state_values, commit_scores
+        return rewards, action_scores, state_value_tensors, state_values, commit_scores, g_ts
 
 
     def compute_returns(self, rewards):
@@ -178,8 +186,8 @@ class Trainer:
         # run certain test episodes on current policy, 
         # recording the mean/std of the cumulative reward.
         total_rewards = []
-        for i in range(self.n_test_episodes):
-            rewards, _, _, _, _ = self.generate_episode(self.render_when_test)
+        for _ in range(self.n_test_episodes):
+            rewards, _, _, _, _, _ = self.generate_episode(self.render_when_test)
             total_rewards.append(sum(rewards))
             
         total_rewards = np.array(total_rewards)
@@ -202,5 +210,5 @@ class Trainer:
         plt.errorbar(self.test_episodes, self.test_means, yerr = self.test_stds)
         
         plt.title("total reward vs. the number of training episodes")
-        plt.savefig(self.pic_path + "/error_bars.png")
+        plt.savefig(self.pic_dir + "/error_bars.png")
         plt.clf()
