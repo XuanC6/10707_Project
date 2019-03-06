@@ -102,8 +102,8 @@ class Trainer:
 
         n_steps = 0
 
+        # reset the environment and agent
         obs = self.env.reset()
-
         self.agent.initialize_plans()
 
         if render:

@@ -23,6 +23,22 @@ class STRAW(tf.keras.Model):
 
         self.config = config
 
+        self.T = self.config.max_T
+        self.n_actions = self.config.n_actions
+
+        # for time_shift op of action plan v
+        # (A + 1, T)
+        _idx_action_v = tf.manip.tile([tf.range(self.T)], [self.n_actions + 1, 1])
+        self.mask_action_v = tf.math.less(_idx_action_v, self.T - 1)
+        self.zeros_action_v = tf.zeros(shape=[self.n_actions + 1, self.T], dtype=tf.float32)
+
+        # for time_shift op of commitment plan
+        # (1, T)
+        _idx_commit = tf.manip.tile([tf.range(self.T)], [1, 1])
+        self.mask_commit = tf.math.less(_idx_commit, self.T - 1)
+        self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.int32)
+
+
         self.initialize_layers()
         self.initialize_plans()
         self.activate_layers()
@@ -86,9 +102,6 @@ class STRAW(tf.keras.Model):
 
 
     def initialize_plans(self):
-        self.T = self.config.max_T
-        self.n_actions = self.config.n_actions
-
         # (A + 1, T)
         self.action_plan_v = tf.zeros(shape=[self.n_actions + 1, self.T], dtype=tf.float32)
         self.action_plan = self.action_plan_v[:-1, :]
@@ -99,18 +112,6 @@ class STRAW(tf.keras.Model):
         # (1, T)
         self.commitment_plan = tf.convert_to_tensor([commitment_plan], dtype=tf.int32)
         
-        # for time_shift op of action plan
-        # (A + 1, T)
-        _idx_action = tf.manip.tile([tf.range(self.T)], [self.n_actions + 1, 1])
-        self.mask_action = tf.math.less(_idx_action, self.T - 1)
-        self.zeros_action = tf.zeros(shape=[self.n_actions + 1, self.T], dtype=tf.float32)
-
-        # for time_shift op of commitment plan
-        # (1, T)
-        _idx_commit = tf.manip.tile([tf.range(self.T)], [1, 1])
-        self.mask_commit = tf.math.less(_idx_commit, self.T - 1)
-        self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.int32)
-
 
     def extract_feature(self, inputs):
         
@@ -192,20 +193,20 @@ class STRAW(tf.keras.Model):
         return update_term
 
     
-    def time_shift_action_plan(self, action_plan):
+    def time_shift_action_plan_v(self):
         # time_shift operation of action plan
         # (A + 1, T)
-        action_plan_shift = tf.roll(action_plan, shift = 1, axis = 1)
+        action_plan_v_shift = tf.roll(self.action_plan_v, shift = 1, axis = 1)
         # mask the last column to 0
-        mask_action_plan_shift = tf.where(self.mask_action, action_plan_shift, self.zeros_action)
+        mask_action_plan_v_shift = tf.where(self.mask_action_v, action_plan_v_shift, self.zeros_action_v)
         
-        return mask_action_plan_shift
+        return mask_action_plan_v_shift
 
 
-    def time_shift_commit_plan(self, commit_plan):
+    def time_shift_commit_plan(self):
         # time_shift operation of commit_plan
         # (1, T)
-        commit_plan_shift = tf.roll(commit_plan, shift = 1, axis = 1)
+        commit_plan_shift = tf.roll(self.commitment_plan, shift = 1, axis = 1)
         # mask the last column to 0
         mask_commit_plan_shift = tf.where(self.mask_commit, commit_plan_shift, self.zeros_commit)
         
@@ -276,17 +277,17 @@ class STRAW(tf.keras.Model):
         # (A + 1, T)
         update_term = self.write(epsilon_t)
 
-        new_action_plan = self.time_shift_action_plan(self.action_plan_v)
+        new_action_plan_v = self.time_shift_action_v_plan()
 
         '''
         plans update
         '''
         if g_t > 0:
-            self.action_plan_v = new_action_plan + update_term
+            self.action_plan_v = new_action_plan_v + update_term
             self.commitment_plan = self.generate_new_commit_plan(attention_params, epsilon_t)
         else:
-            self.action_plan_v = new_action_plan
-            self.commitment_plan = self.time_shift_commit_plan(self.commitment_plan)
+            self.action_plan_v = new_action_plan_v
+            self.commitment_plan = self.time_shift_commit_plan()
 
         self.action_plan = self.action_plan_v[:-1, :]
         self.state_values = self.action_plan_v[-1, :]
