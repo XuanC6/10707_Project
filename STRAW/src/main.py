@@ -7,10 +7,16 @@ import tensorflow as tf
 from trainer import Trainer
 from config import Configuration
 
+tf.enable_eager_execution()
+
 '''
 Execute training
 '''
 
 if __name__ == "__main__":
-    pass
+    Config = Configuration()
+    MyTrainer = Trainer(Config)
+
+    MyTrainer.train()
+    MyTrainer.plot_test_reward()
 
