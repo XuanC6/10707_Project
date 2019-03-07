@@ -1,3 +1,6 @@
+coinrun/saved_models
+coinrun/files_not_used
+coinrun/assets
 .DS_Store
 __pycache__/
 .idea/
