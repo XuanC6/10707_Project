@@ -152,7 +152,7 @@ class STRAW(tf.keras.Model):
         stride = tf.math.exp(log_stride)
         var = tf.math.exp(log_var)
 
-        mean_locs = np.arange(self.K, dtype=float) - self.K/2 -0.5
+        mean_locs = np.arange(self.K, dtype=float) - self.K/2 + 0.5
         mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
         mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
         # (1, K)
@@ -242,9 +242,10 @@ class STRAW(tf.keras.Model):
         stride = tf.math.exp(log_stride)
         var = tf.math.exp(log_var)
 
-        mean_locs = np.arange(1, dtype=float) - 1/2 -0.5
+        mean_locs = np.arange(1, dtype=float) - 1/2 + 0.5
         mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
         mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
+        # (1, 1)
         mean_locs = tf.expand_dims(mean_locs, axis = 0)
 
         # Fx (T, 1)  
