@@ -23,6 +23,14 @@ class STRAW(tf.keras.Model):
 
         self.config = config
 
+        self.initialize_utils()
+        self.initialize_layers()
+        self.initialize_plans()
+        self.activate_layers()
+        self.initialize_plans()
+
+
+    def initialize_utils(self):
         self.T = self.config.max_T
         self.n_actions = self.config.n_actions
         self.K = self.config.K_filters
@@ -39,11 +47,7 @@ class STRAW(tf.keras.Model):
         self.mask_commit = tf.math.less(_idx_commit, self.T - 1)
         self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.float32)
 
-
-        self.initialize_layers()
-        self.initialize_plans()
-        self.activate_layers()
-        self.initialize_plans()
+        self.e = tf.convert_to_tensor([[self.config.e]], dtype=tf.float32)
 
 
     def initialize_layers(self):
@@ -249,12 +253,9 @@ class STRAW(tf.keras.Model):
         Fx = tf.math.exp(-tf.math.truediv(tf.math.square(Fx - mean_locs), 2*var+1e-8))
         Fx = tf.math.truediv(Fx, tf.math.reduce_sum(Fx, axis = 0, keepdims = True))
 
-        (1, 1)
-        e = tf.convert_to_tensor([[self.config.e]], dtype=tf.float32)
-
         # (T, 1)*(1, 1)
         # transpose -> (1, T)
-        commit_plan_logits = tf.linalg.transpose(tf.linalg.matmul(Fx, e))
+        commit_plan_logits = tf.linalg.transpose(tf.linalg.matmul(Fx, self.e))
         bias = tf.Variable(np.zeros(shape = [1, self.T]), dtype=tf.float32, name = "commit_bias")
 
         commit_plan_logits = commit_plan_logits + bias
@@ -268,7 +269,6 @@ class STRAW(tf.keras.Model):
         plans_update_and_sample
         inputs: frame
         '''
-
         # feature of the currrent frame, (1, ?)
         z_t = self.extract_feature(inputs)
  
@@ -299,11 +299,13 @@ class STRAW(tf.keras.Model):
             self.action_plan_v = new_action_plan_v
             self.commitment_plan = self.time_shift_commit_plan()
 
-        self.action_plan = tf.slice(self.action_plan_v, [0, 0], [self.n_actions, self.T]) 
+        self.action_plan = tf.slice(self.action_plan_v, [0, 0], [self.n_actions, self.T])
         self.state_values = tf.slice(self.action_plan_v, [self.n_actions, 0], [1, self.T])
 
-        # sample an action, shape = ()
-        current_action_probs = tf.linalg.transpose(tf.slice(self.action_plan, [0, 0], [self.n_actions, 1]))
-        action_tensor = tf.squeeze(tf.random.multinomial(tf.math.softmax(current_action_probs), 1))
+        '''
+        Sample Action
+        '''
+        self.current_action_probs = tf.math.softmax(tf.linalg.transpose(tf.slice(self.action_plan, [0, 0], [self.n_actions, 1])))
+        action_tensor = tf.squeeze(tf.random.multinomial(self.current_action_probs, 1))
 
         return action_tensor, g_t_tensor

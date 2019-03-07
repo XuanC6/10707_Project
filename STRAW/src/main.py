@@ -17,6 +17,6 @@ if __name__ == "__main__":
     Config = Configuration()
     MyTrainer = Trainer(Config)
     print("Building Model Succeed")
-    MyTrainer.train()
-    MyTrainer.plot_test_reward()
-
+    # MyTrainer.train()
+    # MyTrainer.plot_test_reward()
+    print(len(MyTrainer.agent.weights))

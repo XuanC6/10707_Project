@@ -12,12 +12,10 @@ All parameters and hyperparameters
 class Configuration:
 
     def __init__(self):
-
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-
-        self.env = gym.make("MsPacman-v0")
-        # self.env = gym.make("CartPole-v1")
+        # self.env = gym.make("MsPacman-v0")
+        self.env = gym.make("CartPole-v1")
 
         '''
         Feature Extractor

@@ -49,7 +49,6 @@ class Trainer:
 
 
     def train(self):
-
         n_episodes = 0
 
         if os.path.isfile(self.weight_path + '.index'):
@@ -126,8 +125,8 @@ class Trainer:
             action_tensor, g_t_tensor = self.agent([obs])
 
             action = action_tensor.numpy()
-            action_score = self.agent.action_plan[:, 0][action]
-            state_value_tensor =  self.agent.state_values[0]
+            action_score = self.agent.current_action_probs[0][action]
+            state_value_tensor = self.agent.state_values[0][0]
             state_value = state_value_tensor.numpy()
             commit_score = self.agent.commitment_plan[0][0]
             g_t = g_t_tensor.numpy()
