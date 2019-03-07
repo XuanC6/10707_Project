@@ -15,49 +15,52 @@ class Configuration:
 
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+
+        self.env = gym.make("MsPacman-v0")
+        # self.env = gym.make("CartPole-v1")
+
         '''
         Feature Extractor
         '''
-        self.input_frame_height = None
-        self.input_frame_width = None
-        self.input_frame_channels = None
+        self.input_frame_height = 88
+        self.input_frame_width = 80
+        self.input_frame_channels = 1
 
-        self.conv_filters = []
-        self.conv_kernel_sizes  = []
-        self.conv_strides = []
-        self.conv_paddings = []
-        self.conv_activations = "relu"
+        self.conv_filters = [32, 64, 64]
+        self.conv_kernel_sizes  = [(8, 8), (4, 4), (3, 3)]
+        self.conv_strides = [4, 2, 1]
+        self.conv_paddings = ["SAME"] * 3
+        self.conv_activations = ["relu"] * 3
         self.conv_initializer = "he_normal"
 
-        self.fe_n_denses = None
-        self.fe_dense_activations = "relu"
+        self.fe_n_denses = [512]
+        self.fe_dense_activations = ["relu"]
         self.fe_dense_initializer = "he_normal"
-        self.fe_n_outputs = None
+        self.fe_n_outputs = 128
 
         '''
         Agent
         '''
-        self.max_T = None
-        self.n_actions = None
-        self.K_filters = 12
+        self.max_T = 500
+        self.n_actions = self.env.action_space.n
+        self.K_filters = 10
 
         self.linear_initializer = "he_normal"
-        self.ir_n_hidden = None
+        self.ir_n_hidden = 64
         self.ir_activation = "relu"
         self.ir_initializer = "he_normal"
-        self.n_epsilon_t = None
+        self.n_epsilon_t = 64
 
-        self.e = None
+        self.e = 100
 
         '''
         Trainer
         '''
-        self.env = 
         self.max_episodes = 500
         self.render_when_train = False
         self.render_when_test = True
         self.gamma = 0.95
-        self.commit_lambda = 
+        self.commit_lambda = 0.1
         self.N_compute_returns = 10
 
         self.lr_actor = 0.001
@@ -66,8 +69,8 @@ class Configuration:
         self.optimizer_actor = tf.keras.optimizers.Adam
         self.optimizer_critic = tf.keras.optimizers.Adam
 
-        self.save_interval = 
-        self.test_interval = 
+        self.save_interval = 10
+        self.test_interval = 10
 
         self.n_test_episodes = 10
 

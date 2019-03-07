@@ -25,6 +25,7 @@ class STRAW(tf.keras.Model):
 
         self.T = self.config.max_T
         self.n_actions = self.config.n_actions
+        self.K = self.config.K_filters
 
         # for time_shift op of action plan v
         # (A + 1, T)
@@ -96,7 +97,7 @@ class STRAW(tf.keras.Model):
         dim1 = self.config.input_frame_height
         dim2 = self.config.input_frame_width
         dim3 = self.config.input_frame_channels
-        input_tensor = tf.keras.layers.Input(shape = [dim1, dim2, dim3])
+        input_tensor = tf.keras.layers.Input(shape = [dim1, dim2, dim3], batch_size = 1)
          
         _ = self.call(input_tensor)
 
@@ -104,8 +105,8 @@ class STRAW(tf.keras.Model):
     def initialize_plans(self):
         # (A + 1, T)
         self.action_plan_v = tf.zeros(shape=[self.n_actions + 1, self.T], dtype=tf.float32)
-        self.action_plan = self.action_plan_v[:-1, :]
-        self.state_values = self.action_plan_v[-1, :]
+        self.action_plan = tf.slice(self.action_plan_v, [0, 0], [self.n_actions, self.T]) 
+        self.state_values = tf.slice(self.action_plan_v, [self.n_actions, 0], [1, self.T])
 
         commitment_plan = [0]*self.T
         commitment_plan[0] = 1
@@ -114,7 +115,7 @@ class STRAW(tf.keras.Model):
         
 
     def extract_feature(self, inputs):
-        
+        # (1, frame_height, frame_width, frame_channels)
         hidden = inputs
         for layer in self.conv_layers:
             hidden = layer(hidden)
@@ -131,6 +132,7 @@ class STRAW(tf.keras.Model):
     def compute_attention_params(self, feature):
         # compute attention parameters from feature
         # (grid position, stride, variance of Gaussian filters)
+        # (1, 3)
         attention_params = self.atten_linear_layer(feature)
     
         return attention_params
@@ -138,16 +140,18 @@ class STRAW(tf.keras.Model):
 
     def read(self, attention_params):
         # read operation
-        grid_pos, log_stride, log_var = attention_params[0]
+        attention_params_squeeze = tf.squeeze(attention_params)
+        grid_pos = tf.slice(attention_params_squeeze, [0], [1])
+        log_stride = tf.slice(attention_params_squeeze, [1], [1])
+        log_var = tf.slice(attention_params_squeeze, [2], [1])
 
         stride = tf.math.exp(log_stride)
         var = tf.math.exp(log_var)
 
-        self.K = self.config.K_filters
-
-        mean_locs = np.arange(self.K, dtype = np.float) - self.K/2 -0.5
+        mean_locs = np.arange(self.K, dtype=float) - self.K/2 -0.5
         mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
         mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
+        # (1, K)
         mean_locs = tf.expand_dims(mean_locs, axis = 0)
 
         # Fx (T, K)  
@@ -168,9 +172,10 @@ class STRAW(tf.keras.Model):
         # beta_t (A + 1, K)
         # z_t (1, ?)
 
-        # (K, A+?)
-        hidden_layer = tf.concat([tf.linalg.transpose(beta_t), tf.manip.tile(z_t, [self.K, 1])], 
-                                    axis = 1)
+        # (K, A+1 + ?)
+        beta_t_tranpose  = tf.linalg.transpose(beta_t)
+        z_t_tile = tf.manip.tile(z_t, [self.K, 1])
+        hidden_layer = tf.concat([beta_t_tranpose, z_t_tile], axis = 1)
 
         hidden_layer = self.ir_layer1(hidden_layer)
 
@@ -196,7 +201,7 @@ class STRAW(tf.keras.Model):
     def time_shift_action_plan_v(self):
         # time_shift operation of action plan
         # (A + 1, T)
-        action_plan_v_shift = tf.roll(self.action_plan_v, shift = -1, axis = 1)
+        action_plan_v_shift = tf.manip.roll(self.action_plan_v, shift = -1, axis = 1)
         # mask the last column to 0
         mask_action_plan_v_shift = tf.where(self.mask_action_v, action_plan_v_shift, self.zeros_action_v)
         
@@ -206,7 +211,7 @@ class STRAW(tf.keras.Model):
     def time_shift_commit_plan(self):
         # time_shift operation of commit_plan
         # (1, T)
-        commit_plan_shift = tf.roll(self.commitment_plan, shift = -1, axis = 1)
+        commit_plan_shift = tf.manip.roll(self.commitment_plan, shift = -1, axis = 1)
         # mask the last column to 0
         mask_commit_plan_shift = tf.where(self.mask_commit, commit_plan_shift, self.zeros_commit)
         
@@ -218,18 +223,22 @@ class STRAW(tf.keras.Model):
         '''
         !!! Based on my own understanding
         '''
-        # (1, ?)       
+        # (1, ?)
         feature = tf.concat([tf.manip.reshape(epsilon_t, [1, -1]), attention_params], axis = 1)
-
+        
         # (grid position, stride, variance of Gaussian filters)
         attention_params_c = self.atten_c_linear_layer(feature)
 
-        grid_pos, log_stride, log_var = attention_params_c[0]
+        # grid_pos, log_stride, log_var = attention_params_c[0]
+        attention_params_c_squeeze = tf.squeeze(attention_params_c)
+        grid_pos = tf.slice(attention_params_c_squeeze, [0], [1])
+        log_stride = tf.slice(attention_params_c_squeeze, [1], [1])
+        log_var = tf.slice(attention_params_c_squeeze, [2], [1])
 
         stride = tf.math.exp(log_stride)
         var = tf.math.exp(log_var)
 
-        mean_locs = np.arange(1, dtype = np.float) - 1/2 -0.5
+        mean_locs = np.arange(1, dtype=float) - 1/2 -0.5
         mean_locs = tf.convert_to_tensor(mean_locs, dtype=tf.float32)
         mean_locs = tf.math.truediv(mean_locs, stride) + grid_pos
         mean_locs = tf.expand_dims(mean_locs, axis = 0)
@@ -246,7 +255,7 @@ class STRAW(tf.keras.Model):
         # (T, 1)*(1, 1)
         # transpose -> (1, T)
         commit_plan_logits = tf.linalg.transpose(tf.linalg.matmul(Fx, e))
-        bias = tf.Variable(np.zeros(shape = [1, self.T]), name = "commit_bias")
+        bias = tf.Variable(np.zeros(shape = [1, self.T]), dtype=tf.float32, name = "commit_bias")
 
         commit_plan_logits = commit_plan_logits + bias
         new_commit_plan = tf.math.sigmoid(commit_plan_logits)
@@ -262,11 +271,12 @@ class STRAW(tf.keras.Model):
 
         # feature of the currrent frame, (1, ?)
         z_t = self.extract_feature(inputs)
-
+ 
         # current state of commitment plan, scalar
         # (2, T)
         commit_probs = tf.concat([1-self.commitment_plan, self.commitment_plan], axis = 0)
-        g_t = tf.squeeze(tf.random.multinomial(commit_probs[:, 0], 1))
+        current_commit_probs = tf.linalg.transpose(tf.slice(commit_probs, [0, 0], [2, 1]))
+        g_t_tensor = tf.squeeze(tf.random.multinomial(current_commit_probs, 1))
 
         # (1, 3) 
         attention_params = self.compute_attention_params(z_t)
@@ -282,28 +292,18 @@ class STRAW(tf.keras.Model):
         '''
         plans update
         '''
-        if g_t > 0:
+        if g_t_tensor > 0:
             self.action_plan_v = new_action_plan_v + update_term
             self.commitment_plan = self.generate_new_commit_plan(attention_params, epsilon_t)
         else:
             self.action_plan_v = new_action_plan_v
             self.commitment_plan = self.time_shift_commit_plan()
 
-        self.action_plan = self.action_plan_v[:-1, :]
-        self.state_values = self.action_plan_v[-1, :]
+        self.action_plan = tf.slice(self.action_plan_v, [0, 0], [self.n_actions, self.T]) 
+        self.state_values = tf.slice(self.action_plan_v, [self.n_actions, 0], [1, self.T])
 
         # sample an action, shape = ()
-        action = tf.squeeze(tf.random.multinomial(tf.log([self.action_plan_v[:, 0]]), 1))
+        current_action_probs = tf.linalg.transpose(tf.slice(self.action_plan, [0, 0], [self.n_actions, 1]))
+        action_tensor = tf.squeeze(tf.random.multinomial(tf.math.softmax(current_action_probs), 1))
 
-        # constant
-        action = action.numpy()
-        # tensor
-        action_score = self.action_plan_v[:, 0][action]
-        # tensor
-        state_value_tensor = self.state_values[0]
-        # constant
-        state_value = state_value_tensor.numpy()
-        # tensor
-        commit_score = self.commitment_plan[0]
-
-        return action, action_score, state_value_tensor, state_value, commit_score, g_t
+        return action_tensor, g_t_tensor

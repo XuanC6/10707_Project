@@ -54,10 +54,10 @@ class Trainer:
 
         if os.path.isfile(self.weight_path + '.index'):
             self.agent.load_weights(self.weight_path)
-            print('Data Restored')
+            print('Weights Restored')
             print(datetime.now())
         else:
-            print('Data Initialized')
+            print('Weights Initialized')
             print(datetime.now())
 
         while True:
@@ -68,8 +68,13 @@ class Trainer:
                 rewards, action_scores, state_value_tensors, state_values, commit_scores, g_ts \
                                                  = self.generate_episode(self.render_when_train)
 
-                # 2. Compute the returns G(N_step)
-                # returns = self.compute_returns_N(state_values, rewards)
+                # convert to tensors
+                action_scores = tf.identity(action_scores)
+                state_value_tensors = tf.identity(state_value_tensors)
+                state_values = tf.identity(state_values)
+                commit_scores = tf.identity(commit_scores)
+
+                # 2. Compute the returns G
                 returns = self.compute_returns(rewards)
 
                 loss_actor = -tf.reduce_mean((returns - state_values) * tf.log(action_scores)) + \
@@ -117,8 +122,16 @@ class Trainer:
             self.env.render()
         
         while True:
-            action, action_score, state_value_tensor, state_value, commit_score, g_t = self.agent(obs)
-            
+            obs = self.preprocess_observation(obs)
+            action_tensor, g_t_tensor = self.agent([obs])
+
+            action = action_tensor.numpy()
+            action_score = self.agent.action_plan[:, 0][action]
+            state_value_tensor =  self.agent.state_values[0]
+            state_value = state_value_tensor.numpy()
+            commit_score = self.agent.commitment_plan[0][0]
+            g_t = g_t_tensor.numpy()
+
             n_steps += 1
             next_obs, reward, done, _ = self.env.step(action)
             if render:
@@ -212,3 +225,16 @@ class Trainer:
         plt.title("total reward vs. the number of training episodes")
         plt.savefig(self.pic_dir + "/error_bars.png")
         plt.clf()
+
+
+    def preprocess_observation(self, obs):
+        mspacman_color = np.array([210, 164, 74]).mean()
+        # crop and downsize
+        img = obs[1:176:2, ::2] 
+        # to grayscale
+        img = img.mean(axis = 2) 
+        # improve contrast
+        img[img == mspacman_color] = 0 
+        # normalize from -1. to 1.
+        img = (img - 128) / 128 - 1
+        return img.reshape(88, 80, 1)
