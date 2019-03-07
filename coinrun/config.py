@@ -2,13 +2,11 @@ from mpi4py import MPI
 import argparse
 import os
 
-
 class ConfigSingle(object):
     """
     A global config object that can be initialized from command line arguments or
     keyword arguments.
     """
-
     def __init__(self):
         self.WORKDIR = './saved_models/'
         self.TB_DIR = '/tmp/tensorflow'
@@ -30,7 +28,7 @@ class ConfigSingle(object):
 
         # The game to be played.
         # One of {'standard', 'platform', 'maze'} (for CoinRun, CoinRun-Platforms, Random-Mazes)
-        type_keys.append(('gamet', 'game_type', str, 'standard', True))
+        type_keys.append(('gamet', 'game_type', str, 'standard', True)) 
 
         # The convolutional architecture to use
         # One of {'nature', 'impala', 'impalalarge'}
@@ -131,8 +129,8 @@ class ConfigSingle(object):
         for bk in bool_keys:
             arg_keys.append(bk[1])
 
-            if (len(bk) > 2) and bk[2]:
-                self.RES_KEYS.append(bk[1])
+            if (len(tk) > 2) and tk[2]:
+                self.RES_KEYS.append(tk[1])
 
         self.arg_keys = arg_keys
         self.bool_keys = bool_keys
@@ -161,10 +159,10 @@ class ConfigSingle(object):
         self.load_data[load_key] = ld
 
     def process_field(self, name):
-        return name.replace('-', '_')
+        return name.replace('-','_')
 
     def deprocess_field(self, name):
-        return name.replace('_', '-')
+        return name.replace('_','-')
 
     def parse_all_args(self, args):
         assert isinstance(args, argparse.Namespace), 'expected argparse.Namespace object'
@@ -209,7 +207,7 @@ class ConfigSingle(object):
 
         if restore_id is None:
             return None
-
+        
         filename = Config.get_save_file_for_rank(0, self.process_field(restore_id), base_name=base_name)
 
         return filename
@@ -247,7 +245,7 @@ class ConfigSingle(object):
         _args_dict.update(self.args_dict)
 
         return _args_dict
-
+        
     def initialize_args(self, use_cmd_line_args=True, **kwargs):
         default_args = {}
 
@@ -262,8 +260,7 @@ class ConfigSingle(object):
         parser = argparse.ArgumentParser()
 
         for tk in self.type_keys:
-            parser.add_argument('-' + tk[0], '--' + self.deprocess_field(tk[1]), type=tk[2],
-                                default=default_args[tk[1]])
+            parser.add_argument('-' + tk[0], '--' + self.deprocess_field(tk[1]), type=tk[2], default=default_args[tk[1]])
 
         for bk in self.bool_keys:
             parser.add_argument('--' + bk[0], dest=bk[1], action='store_true')
@@ -278,6 +275,5 @@ class ConfigSingle(object):
         self.parse_all_args(args)
 
         return args
-
 
 Config = ConfigSingle()

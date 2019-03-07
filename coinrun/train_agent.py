@@ -9,7 +9,9 @@ import tensorflow as tf
 from baselines.common import set_global_seeds
 from collections import defaultdict
 import setup_utils, policies, ppo2
+import coinrun.main_utils as utils
 import gym
+import wrappers
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import  make_vec_env
 import sys
@@ -47,14 +49,26 @@ def main():
         _game_envs[env_type].add(env.id)
 
     # env = make_vec_env(env_id, env_type, nenvs, seed, gamestate=args.gamestate, reward_scale=args.reward_scale)
-    env = make_vec_env(env_id, env_type, nenvs, seed)
-    env = VecFrameStack(env, frame_stack_size)
+
+    """
+    save_interval = args.save_interval
+    
+    env = utils.make_general_env(nenvs, seed=rank)
+
+    with tf.Session(config=config):
+        env = wrappers.add_final_wrappers(env)
+        
+        policy = policies.get_policy()
+    """
+    env = utils.make_general_env(env_id, env_type, nenvs, seed)
+    # env = make_vec_env(env_id, env_type, nenvs, seed)
+    # env = VecFrameStack(env, frame_stack_size)
 
     # env = utils.make_general_env(nenvs, seed=rank)
 
     with tf.Session(config=config):
         # env = wrappers.add_final_wrappers(env) #don't use wrappers anymore
-        
+        env = wrappers.add_final_wrappers(env)
         policy = policies.get_policy()
 
         # ppo2.learn(policy=policy,
@@ -73,7 +87,7 @@ def main():
         ppo2.learn(policy=policy,
                     env=env,
                     save_interval=save_interval,
-                    nsteps=int(1e6),
+                    nsteps=int(1000),
                     nminibatches=100,
                     lam=0.95,
                     gamma=0.9,
