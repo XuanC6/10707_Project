@@ -1,0 +1,1 @@
+I can run this code successfully in Pycharm, after marking the inner "coinrun" folder  as  Sources Root. Just run the "train_agent.py" with passing a proper steps number to the ppo2.learn "nsteps" argument.
