@@ -36,7 +36,7 @@ class STRAW(tf.keras.Model):
         # (1, T)
         _idx_commit = tf.manip.tile([tf.range(self.T)], [1, 1])
         self.mask_commit = tf.math.less(_idx_commit, self.T - 1)
-        self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.int32)
+        self.zeros_commit = tf.zeros(shape=[1, self.T], dtype=tf.float32)
 
 
         self.initialize_layers()
@@ -110,7 +110,7 @@ class STRAW(tf.keras.Model):
         commitment_plan = [0]*self.T
         commitment_plan[0] = 1
         # (1, T)
-        self.commitment_plan = tf.convert_to_tensor([commitment_plan], dtype=tf.int32)
+        self.commitment_plan = tf.convert_to_tensor([commitment_plan], dtype=tf.float32)
         
 
     def extract_feature(self, inputs):
@@ -196,7 +196,7 @@ class STRAW(tf.keras.Model):
     def time_shift_action_plan_v(self):
         # time_shift operation of action plan
         # (A + 1, T)
-        action_plan_v_shift = tf.roll(self.action_plan_v, shift = 1, axis = 1)
+        action_plan_v_shift = tf.roll(self.action_plan_v, shift = -1, axis = 1)
         # mask the last column to 0
         mask_action_plan_v_shift = tf.where(self.mask_action_v, action_plan_v_shift, self.zeros_action_v)
         
@@ -206,7 +206,7 @@ class STRAW(tf.keras.Model):
     def time_shift_commit_plan(self):
         # time_shift operation of commit_plan
         # (1, T)
-        commit_plan_shift = tf.roll(self.commitment_plan, shift = 1, axis = 1)
+        commit_plan_shift = tf.roll(self.commitment_plan, shift = -1, axis = 1)
         # mask the last column to 0
         mask_commit_plan_shift = tf.where(self.mask_commit, commit_plan_shift, self.zeros_commit)
         
