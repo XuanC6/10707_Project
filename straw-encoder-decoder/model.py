@@ -4,13 +4,14 @@ import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.rnn import ConvLSTMCell
+import tensorflow.nn.d
 tf.enable_eager_execution()
 
 base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 utils_dir = os.path.join(base_dir, "utils")
 sys.path.append(utils_dir)
 
-class encoder(object):
+class Encoder(object):
     """"
     tf.contrib.rnn.ConvLSTMCell
     __init__(
@@ -25,23 +26,17 @@ class encoder(object):
     name='conv_lstm_cell'
 )
     """
-    def __init__(self,
-                 batch_size,
-                 timesteps,
-                 height,
-                 width,
-                 kernel,
-                 channels,
-                 filters,
-                 conv_dims=2):
-        self.batch_size = batch_size
-        self.timesteps = timesteps
-        self.height = height
-        self.width  = width
-        self.kernel = kernel
-        self.channles = channels
-        self.filters = filters
-        self.conv_dims = conv_dims
+    def __init__(self, config):
+        super(Encoder, self).__init__()
+        self.config = config
+        self.batch_size = self.config.batch_size
+        self.timesteps = self.config.timesteps
+        self.height = self.config.height
+        self.width = self.config.width
+        self.kernel = self.config.kernel
+        self.channles = self.config.channels
+        self.filters = self.config.filters
+        self.conv_dims = self.config.conv_dims
 
     def forward(self, input):
         # Create a placeholder for videos.
