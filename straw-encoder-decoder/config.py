@@ -17,10 +17,11 @@ class Configuration:
         '''
         self.batch_size = None
         self.timesteps = None
-        self.height = None
-        self.width  = None
+        #for ms-pacman
+        self.height = 210
+        self.width  = 160
         self.kernel = None
-        self.channles = None
+        self.channles = 3
         self.filters = None
         self.conv_dims = None
 
