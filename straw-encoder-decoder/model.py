@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.rnn import ConvLSTMCell
 from .utils import conv2d, flattenallbut0, normc_initializer
 tf.enable_eager_execution()
 
@@ -12,20 +10,6 @@ utils_dir = os.path.join(base_dir, "utils")
 sys.path.append(utils_dir)
 
 class Encoder(tf.keras.Model):
-    """"
-    tf.contrib.rnn.ConvLSTMCell
-    __init__(
-    conv_ndims,
-    input_shape,
-    output_channels,
-    kernel_shape,
-    use_bias=True,
-    skip_connection=False,
-    forget_bias=1.0,
-    initializers=None,
-    name='conv_lstm_cell'
-)
-    """
     def __init__(self, config):
         super(Encoder, self).__init__()
         self.config = config
@@ -49,28 +33,6 @@ class Encoder(tf.keras.Model):
         #directly to the model which is a common practice for TF2.0
         self.inputs = tf.placeholder(tf.float32, [self.batch_size, self.timesteps]  + [
             self.height, self.width])
-        # self.convLSTM = tf.keras.layers.ConvLSTM2D()
-
-
-        """
-          Input shape:
-    - if data_format='channels_first'
-        5D tensor with shape:
-        `(samples, time, channels, rows, cols)`
-    - if data_format='channels_last'
-        5D tensor with shape:
-        `(samples, time, rows, cols, channels)`
-
-  Output shape:
-    - if `return_sequences`
-         - if data_format='channels_first'
-            5D tensor with shape:
-            `(samples, time, filters, output_row, output_col)`
-         - if data_format='channels_last'
-            5D tensor with shape:
-            `(samples, time, output_row, output_col, filters)`
-    - else
-        """
 
     def extract_feature(self, x):
         """
