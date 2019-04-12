@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+import argparse
 import time
 import numpy as np
 import sys, os, glob
 import tensorflow as tf
 
 # from trainer import Trainer
-from trainer_3 import Trainer
+from trainer import Trainer
 from config import Configuration
 
 tf.enable_eager_execution()
@@ -15,11 +16,23 @@ Execute training
 '''
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='707 Project')
+    parser.add_argument("action", type = str,
+                        choices=["train", "continue", "test"])
+    parser.add_argument("--num_episodes", type = int, default = 100)
+    args = parser.parse_args()
+
     Config = Configuration()
-    MyTrainer = Trainer(Config)
-    print("Building Model Succeed")
-    # print(len(MyTrainer.agent.variables))
-    MyTrainer.train()
-    MyTrainer.plot_test_result()
-    # print(MyTrainer.agent.weights)
-    
+    if args.action == "train":
+        MyTrainer = Trainer(Config, restore = False)
+        MyTrainer.train()
+        MyTrainer.plot_test_result()
+    elif args.action == "continue":
+        MyTrainer = Trainer(Config, restore = True)
+        MyTrainer.train()
+        MyTrainer.plot_test_result()
+    elif args.action == "test":
+        MyTrainer = Trainer(Config, restore = True)
+        MyTrainer.test(args.num_episodes)
+

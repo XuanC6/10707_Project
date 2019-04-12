@@ -14,99 +14,92 @@ class Configuration:
     def __init__(self):
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-        self.env = gym.make("MsPacman-v0")
-        # self.env = gym.make("SpaceInvaders-v0")
-        # self.env = gym.make("CartPole-v1")
-
-        '''
-        Feature Extractor
-        '''
-        # self.input_frame_height = 88
-        # self.input_frame_width = 80
-        # self.input_frame_channels = 1
-
-        self.input_frame_height = 170
-        self.input_frame_width = 160
-        self.input_frame_channels = 3
-
-        # self.conv_filters = [32, 64, 64]
-        # self.conv_kernel_sizes  = [(8, 8), (4, 4), (3, 3)]
-        # self.conv_strides = [4, 2, 1]
-
-        self.conv_filters = [64, 128, 128, 128]
-        self.conv_kernel_sizes  = [(8, 8), (4, 4), (4, 4), (3, 3)]
-        self.conv_strides = [4, 2, 2, 1]
-
-        self.conv_paddings = ["SAME"] * len(self.conv_filters)
-        self.conv_activations = ["elu"] * len(self.conv_filters)
-        self.conv_initializer = "he_normal"
-
-        # self.fe_n_denses = [512]
-        self.fe_n_denses = [1024, 1024]
-        self.fe_dense_activations = ["elu"] * len(self.fe_n_denses)
-
-        self.fe_dense_initializer = "he_normal"
-        self.fe_n_outputs = 128
-
-        '''
-        Agent
-        '''
+        self.env = gym.make("MsPacman-ram-v0")
         self.n_actions = self.env.action_space.n
-        # self.max_T = 100
-        # self.K_filters = 10
+        self.option_dim = 256
+        self.input_length = 128
 
-        # self.linear_initializer = "he_normal"
-        # self.ir_n_hidden = 64
-        # self.ir_activation = "relu"
-        # self.ir_initializer = "he_normal"
-        # self.n_epsilon_t = 64
+        '''
+        Option_Encoder
+        '''
+        self.dense_dims_OE = [512, 512, 512]
+        self.dense_activations_OE = ["elu"] * len(self.dense_dims_OE)
+        self.dense_initializer_OE = "he_normal"
 
-        # self.e = 100
+        '''
+        Critic
+        '''
+        self.dense_dims_Cr = [512, 512, 512]
+        self.dense_activations_Cr = ["elu"] * len(self.dense_dims_Cr)
+        self.dense_initializer_Cr = "he_normal"
+
+        '''
+        Decoder
+        '''
+        self.units = self.option_dim
+        self.dense_dims_De = [256, 256]
+        self.dense_activations_De = ["elu"] * len(self.dense_dims_De)
+        self.dense_initializer_De = "he_normal"
+
+        self.output_dim_De = self.n_actions + 1
+
+        self.max_n_decoding = 3
 
         '''
         Trainer
         '''
-        self.max_episodes = 5000
-        self.render_when_train = False
-        self.render_when_test = False
         self.gamma = 0.99
-        # self.commit_lambda = 0.1
-        
-        self.restore = 1
-
-        self.entropy_coeff = 2e-2
+        self.entropy_coeff = 1e-2
         self.N_compute_returns = 50
-        self.lr = 1e-4
+        self.lr_actor = 1e-4
+        self.lr_critic = 1e-3
         self.momentum = 0.95
 
-        self.optimizer = tf.train.MomentumOptimizer(self.lr, self.momentum, use_nesterov=True)
-        # self.optimizer = tf.train.AdamOptimizer(self.lr)
+        self.render_when_train = False
+        self.render_when_test = False
 
-        self.save_interval = 20
-        self.test_interval = 20
+        # self.optimizer = tf.train.MomentumOptimizer(self.lr, self.momentum, use_nesterov=True)
+        self.optimizer_actor = tf.train.AdamOptimizer(self.lr_actor)
+        self.optimizer_critic = tf.train.AdamOptimizer(self.lr_critic)
 
+        self.max_episodes = 8000
+        self.save_interval = 50
+        self.test_interval = 50
         self.n_test_episodes = 10
 
         '''
         log paths
         '''
-        self.weight_dir = os.path.join(self.base_dir, "weight")
         self.pic_dir = os.path.join(self.base_dir, "pic")
-
-        if not os.path.exists(self.weight_dir):
-            os.makedirs(self.weight_dir)
         if not os.path.exists(self.pic_dir):
             os.makedirs(self.pic_dir)
 
-        self.weight_path = self.weight_dir + '/saved_weights.ckpt'
 
-        # self.weight_actor_dir = os.path.join(self.base_dir, "weight_actor")
-        # self.weight_critic_dir = os.path.join(self.base_dir, "weight_critic")
+        # self.weight_dir = os.path.join(self.base_dir, "weight")
+        # if not os.path.exists(self.weight_dir):
+        #     os.makedirs(self.weight_dir)
+        # self.weight_path = self.weight_dir + '/saved_weights.ckpt'
 
-        # if not os.path.exists(self.weight_actor_dir):
-        #     os.makedirs(self.weight_actor_dir)
-        # if not os.path.exists(self.weight_critic_dir):
-        #     os.makedirs(self.weight_critic_dir)
-        
-        # self.weight_actor_path = self.weight_actor_dir + '/saved_weights.ckpt'
-        # self.weight_critic_path = self.weight_critic_dir + '/saved_weights.ckpt'
+
+        self.weight_oe_dir = os.path.join(self.base_dir, "weight_option_encoder")
+        if not os.path.exists(self.weight_oe_dir):
+            os.makedirs(self.weight_oe_dir)
+        self.weight_oe_path = self.weight_oe_dir + '/saved_weights.ckpt'
+
+
+        self.weight_cr_dir = os.path.join(self.base_dir, "weight_critic")
+        if not os.path.exists(self.weight_cr_dir):
+            os.makedirs(self.weight_cr_dir)
+        self.weight_cr_path = self.weight_cr_dir + '/saved_weights.ckpt'
+
+
+        self.weight_de_dir = os.path.join(self.base_dir, "weight_decoder")
+        if not os.path.exists(self.weight_de_dir):
+            os.makedirs(self.weight_de_dir)
+        self.weight_de_path = self.weight_de_dir + '/saved_weights.ckpt'
+
+
+        self.log_dir = os.path.join(self.base_dir, "logs")
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        self.log_path = self.log_dir + '/train_logs.npz'
