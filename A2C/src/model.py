@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
+from utils import conv2d, flattenallbut0, normc_initializer
 
 tf.enable_eager_execution()
 
@@ -13,6 +14,70 @@ sys.path.append(utils_dir)
 '''
 Define the agent
 '''
+class Encoder(tf.keras.Model):
+    def __init__(self, config):
+        super(Encoder, self).__init__()
+        self.config = config
+        self.batch_size = self.config.batch_size
+        #config for convnet feature extractors
+        self.use_vision = self.config.use_vision
+        self.height = self.config.height
+        self.width = self.config.width
+        self.kernel = self.config.kernel
+        self.channles = self.config.channels
+        self.filters = self.config.filters
+        self.conv_dims = self.config.conv_dims
+        self.convnet_kind = self.config.convnet_kind
+        #config for lstm nets
+        self.hist_len = self.config.history_length
+        self.enc_units = self.config.enc_units
+        self.gru = tf.keras.layers.GRU(self.enc_units,
+                                       #return_sequences=True,
+                                       #return_state=True,
+                                       recurrent_initializer='glorot_uniform')
+        #TODO: whether define a placeholder here or just convert inputs to tensor and feed
+        #directly to the model which is a common practice for TF2.0
+        #self.inputs = tf.placeholder(tf.float32, [self.batch_size, self.hist_len]  + [
+            #self.height, self.width])
+
+    def extract_feature(self, x):
+        """
+        extract feature through conv nets
+        :param x: shape should be (BS, Height, Width, Channel) aka "NWHC"
+        :return: featur vectors in shape (BS, hidden_dim) hidden_dim is 256 for small
+        kind convnet or  512  for large kind convnet
+        """
+        if self.convnet_kind == 'small':  # from A3C paper
+            x = tf.nn.relu(conv2d(x, 16, [8, 8], [4, 4], pad="VALID"))
+            x = tf.nn.relu(conv2d(x, 32, [4, 4], [2, 2], pad="VALID"))
+            x = flattenallbut0(x)
+            x = tf.nn.relu(tf.layers.dense(x, 256, name='lin',
+                                           kernel_initializer=normc_initializer(1.0)))
+
+        elif self.convnet_kind == 'large':  # Nature DQN
+            x = tf.nn.relu(conv2d(x, 32, [8, 8], [4, 4], pad="VALID"))
+            x = tf.nn.relu(conv2d(x, 64, [4, 4], [2, 2], pad="VALID"))
+            x = tf.nn.relu(conv2d(x, 64, [3, 3], [1, 1], pad="VALID"))
+            x = flattenallbut0(x)
+            x = tf.nn.relu(tf.layers.dense(x, 512, name='lin',
+                                           kernel_initializer=normc_initializer(1.0)))
+        return x
+
+    def call(self, inputs):
+        if self.use_vision:
+            inputs = self.extract_feature(inputs)
+        output = self.gru(inputs)
+        #output, state = self.gru(inputs, initial_state=hidden)
+
+        #output shape (BS, timestes, units) units is the hidden size
+        #hidden state shape (BS, units)
+        #state is the last output output[:,-1,:] =  state
+        return output
+
+    def initialize_hidden_state(self):
+        return tf.zeros((self.batch_size, self.enc_units))
+
+
 class Option_Encoder(tf.keras.Model):
 
     def __init__(self, config):

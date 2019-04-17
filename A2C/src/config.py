@@ -15,6 +15,7 @@ class Configuration:
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
         self.env = gym.make("MsPacman-ram-v0")
+        self.use_vision = False
         self.n_actions = self.env.action_space.n
         self.option_dim = 256
         self.input_length = 128
@@ -25,6 +26,23 @@ class Configuration:
         self.dense_dims_OE = [512, 512, 512]
         self.dense_activations_OE = ["elu"] * len(self.dense_dims_OE)
         self.dense_initializer_OE = "he_normal"
+
+        '''
+        Encoder
+        '''
+        self.history_length = 10
+        self.batch_size = None
+        #for ms-pacman
+        self.enc_units = self.option_dim
+
+        self.height = 210
+        self.width  = 160
+        self.kernel = None
+        self.channels = 3
+        self.filters = None
+        self.conv_dims = None
+        self.convnet_kind = 'small'
+
 
         '''
         Critic
@@ -80,6 +98,10 @@ class Configuration:
         #     os.makedirs(self.weight_dir)
         # self.weight_path = self.weight_dir + '/saved_weights.ckpt'
 
+        self.weight_enc_dir = os.path.join(self.base_dir, "weight_encoder")
+        if not os.path.exists(self.weight_enc_dir):
+            os.makedirs(self.weight_enc_dir)
+        self.weight_enc_path = self.weight_enc_dir + '/saved_weights.ckpt'
 
         self.weight_oe_dir = os.path.join(self.base_dir, "weight_option_encoder")
         if not os.path.exists(self.weight_oe_dir):

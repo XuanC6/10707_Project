@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import deque
 import os
 import sys
 import random
@@ -10,7 +11,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from model import Option_Encoder, Critic, Decoder
+from model import Encoder, Option_Encoder, Critic, Decoder
 
 tf.enable_eager_execution()
 
@@ -25,6 +26,7 @@ class Trainer:
         self.config = config
 
         self.option_encoder = Option_Encoder(config)
+        self.encoder = Encoder(config)
         self.critic = Critic(config)
         self.decoder = Decoder(config)
 
@@ -34,6 +36,8 @@ class Trainer:
         self.render_when_test = config.render_when_test
         self.gamma = config.gamma
         self.N_compute_returns = config.N_compute_returns
+
+        self.hist_len = config.history_length
 
         self.optimizer_actor = config.optimizer_actor
         self.optimizer_critic = config.optimizer_critic
@@ -55,6 +59,7 @@ class Trainer:
         # self.weight_path = config.weight_path
         self.pic_dir = config.pic_dir
 
+        self.weight_enc_path = config.weight_enc_path
         self.weight_oe_path = config.weight_oe_path
         self.weight_cr_path = config.weight_cr_path 
         self.weight_de_path = config.weight_de_path
@@ -66,7 +71,8 @@ class Trainer:
         print(datetime.now())
         if os.path.isfile(self.weight_oe_path + '.index') and self.restore:
             # self.agent.load_weights(self.weight_path)
-            self.option_encoder.load_weights(self.weight_oe_path)
+            #self.option_encoder.load_weights(self.weight_oe_path)
+            self.encoder.load_weights(self.weight_enc_path)
             self.critic.load_weights(self.weight_cr_path)
             self.decoder.load_weights(self.weight_de_path)
             print('Weights Restored')
@@ -134,7 +140,8 @@ class Trainer:
             # Save data or do test
             if self.n_episodes % self.save_interval == 0:
                 # self.agent.save_weights(self.weight_path)
-                self.option_encoder.save_weights(self.weight_oe_path)
+                #self.option_encoder.save_weights(self.weight_oe_path)
+                self.encoder.save_weights(self.weight_enc_path)
                 self.critic.save_weights(self.weight_cr_path)
                 self.decoder.save_weights(self.weight_de_path)
                 
@@ -146,18 +153,20 @@ class Trainer:
         print(datetime.now())
         print('training finished')
         # self.agent.save_weights(self.weight_path)
-        self.option_encoder.save_weights(self.weight_oe_path)
+        #self.option_encoder.save_weights(self.weight_oe_path)
+        self.encoder.save_weights(self.weight_enc_path)
         self.critic.save_weights(self.weight_cr_path)
         self.decoder.save_weights(self.weight_de_path)
 
 
-    def generate_episode(self, render, train = True):
+    def generate_episode(self, render, train=True):
         # Generates an episode.
         rewards = []
         action_scores = []
         state_value_tensors = []
         state_values = []
         entropys = []
+
 
         step_this_option = 0
         n_steps = 0
@@ -169,16 +178,21 @@ class Trainer:
         # reset the environment and agent
         obs = self.env.reset()
         obs = self.preprocess_observation(obs)
+
+        state_history = deque([np.zeros(obs.shape, dtype=np.float32)] * self.hist_len, self.hist_len)
+        state_history.append(obs)
+
         if render:
             self.env.render()
         
         while True:
             if replan:
                 replan_times += 1
-                states = self.option_encoder([obs])
+                #states = self.option_encoder([obs])
+                plan = self.encoder(tf.expand_dims(np.array(state_history, dtype=np.float32), 0))
                 replan = False
 
-            states = self.decoder(action_onehot, states)
+            states = self.decoder(action_onehot, plan)
             step_this_option += 1
             
             # if train:
@@ -222,6 +236,7 @@ class Trainer:
             entropys.append(entropy_tensor)
 
             obs = self.preprocess_observation(next_obs)
+            state_history.append(obs)
             
             if done:
                 break
