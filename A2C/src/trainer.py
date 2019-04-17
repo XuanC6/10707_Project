@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 
 from model import Encoder, Option_Encoder, Critic, Decoder
 
-tf.enable_eager_execution()
+gpu_options = tf.GPUOptions(allow_growth=True)
+tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
 
 '''
 Interact with the environment
@@ -25,7 +26,7 @@ class Trainer:
     def __init__(self, config, restore):
         self.config = config
 
-        self.option_encoder = Option_Encoder(config)
+        #self.option_encoder = Option_Encoder(config)
         self.encoder = Encoder(config)
         self.critic = Critic(config)
         self.decoder = Decoder(config)
@@ -91,6 +92,8 @@ class Trainer:
         if self.weights_initialized:
             self.test(self.n_test_episodes)
             self.save_logs()
+
+            print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
         
         if os.path.isfile(self.log_path) and self.restore:
             train_logs = np.load(self.log_path)
@@ -128,14 +131,14 @@ class Trainer:
                 loss_actor = -tf.reduce_mean((returns - state_values) * tf.log(action_scores)) + loss_entropy
                 loss_critic =  tf.reduce_mean(tf.square(returns - state_value_tensors))
 
-            actor_variables = self.option_encoder.variables + self.decoder.variables
+            actor_variables = self.encoder.variables + self.decoder.variables
             grads_actor = tape.gradient(loss_actor, actor_variables)
             self.optimizer_actor.apply_gradients(zip(grads_actor, actor_variables))
 
             grads_critic = tape.gradient(loss_critic, self.critic.variables)
             self.optimizer_critic.apply_gradients(zip(grads_critic, self.critic.variables))
             
-            print("Episode ", self.n_episodes, '  ', (loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times))
+            print(self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards), sep='\t')
             
             # Save data or do test
             if self.n_episodes % self.save_interval == 0:
@@ -146,9 +149,12 @@ class Trainer:
                 self.decoder.save_weights(self.weight_de_path)
                 
             if self.n_episodes % self.test_interval == 0:
+                print()
                 print(datetime.now())
                 self.test(self.n_test_episodes)
                 self.save_logs()
+
+                print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
             
         print(datetime.now())
         print('training finished')

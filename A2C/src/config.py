@@ -3,7 +3,8 @@ import os
 import gym
 import tensorflow as tf
 
-tf.enable_eager_execution()
+gpu_options = tf.GPUOptions(allow_growth=True)
+tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
 
 '''
 All parameters and hyperparameters
@@ -82,7 +83,7 @@ class Configuration:
 
         self.max_episodes = 8000
         self.save_interval = 50
-        self.test_interval = 50
+        self.test_interval = 5
         self.n_test_episodes = 10
 
         '''
