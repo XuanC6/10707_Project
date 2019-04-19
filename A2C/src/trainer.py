@@ -137,6 +137,8 @@ class Trainer:
 
             grads_critic = tape.gradient(loss_critic, self.critic.variables)
             self.optimizer_critic.apply_gradients(zip(grads_critic, self.critic.variables))
+
+            del tape
             
             print(self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards), sep='\t')
             

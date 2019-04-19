@@ -2,6 +2,7 @@
 import os
 import gym
 import tensorflow as tf
+from datetime import datetime
 
 gpu_options = tf.GPUOptions(allow_growth=True)
 tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -13,7 +14,7 @@ All parameters and hyperparameters
 class Configuration:
 
     def __init__(self):
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + str(datetime.now()) + '/'
 
         self.env = gym.make("MsPacman-ram-v0")
         self.use_vision = False
@@ -31,7 +32,7 @@ class Configuration:
         '''
         Encoder
         '''
-        self.history_length = 10
+        self.history_length = 5
         self.batch_size = None
         #for ms-pacman
         self.enc_units = self.option_dim
@@ -81,9 +82,9 @@ class Configuration:
         self.optimizer_actor = tf.train.AdamOptimizer(self.lr_actor)
         self.optimizer_critic = tf.train.AdamOptimizer(self.lr_critic)
 
-        self.max_episodes = 8000
+        self.max_episodes = 10000
         self.save_interval = 50
-        self.test_interval = 5
+        self.test_interval = 50
         self.n_test_episodes = 10
 
         '''
