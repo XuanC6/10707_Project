@@ -14,7 +14,7 @@ All parameters and hyperparameters
 class Configuration:
 
     def __init__(self):
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + str(datetime.now()) + '/'
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + '/' + str(datetime.now()) + '/'
 
         self.env = gym.make("MsPacman-ram-v0")
         self.use_vision = False
