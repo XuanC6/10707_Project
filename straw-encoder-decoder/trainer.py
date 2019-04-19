@@ -2,7 +2,7 @@ import tensorflow as tf
 import os
 from .model import Encoder, Decoder, BahdanauAttention
 
-
+#just copy the frist version of Trainer
 class Trainer:
     def __init__(self, config):
         self.config = config
@@ -28,7 +28,6 @@ class Trainer:
     @tf.function
     def train_step(self, inp, targ, enc_hidden):
         loss = 0
-
         with tf.GradientTape() as tape:
             enc_output, enc_hidden = self.encoder(inp, enc_hidden)
 

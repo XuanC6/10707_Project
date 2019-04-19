@@ -10,8 +10,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from model import STRAW
-
 tf.enable_eager_execution()
 
 '''

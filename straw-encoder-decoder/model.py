@@ -25,6 +25,7 @@ class Encoder(tf.keras.Model):
         #config for lstm nets
         self.timesteps = self.config.timesteps
         self.en_units = self.config.enc_units
+        #encoder_units is the dimension of
         self.gru = tf.keras.layers.GRU(self.en_units,
                                        return_sequences=True,
                                        return_state=True,
