@@ -31,7 +31,7 @@ if __name__ == "__main__":
         MyTrainer = Trainer(Config, restore = False)
         MyTrainer.train()
         MyTrainer.plot_test_result()
-    elif args.action == "continue"
+    elif args.action == "continue":
         MyTrainer = Trainer(Config, restore = True)
         MyTrainer.train()
         MyTrainer.plot_test_result()
