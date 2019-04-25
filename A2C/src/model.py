@@ -5,8 +5,10 @@ import numpy as np
 import tensorflow as tf
 from utils import conv2d, flattenallbut0, normc_initializer
 
-gpu_options = tf.GPUOptions(allow_growth=True)
-tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+#gpu_options = tf.GPUOptions(allow_growth=True)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+tf.enable_eager_execution()
 
 base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 utils_dir = os.path.join(base_dir, "utils")

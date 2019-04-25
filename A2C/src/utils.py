@@ -1,5 +1,10 @@
 import tensorflow as tf
 import numpy as np
+
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+tf.enable_eager_execution()
+
 def conv2d(x, num_filters, filter_size=(3, 3), stride=(1, 1), pad="SAME",
            dtype=tf.float32, collections=None,
            summary_tag=None):

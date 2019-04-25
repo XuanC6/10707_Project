@@ -4,8 +4,10 @@ import gym
 import tensorflow as tf
 from datetime import datetime
 
-gpu_options = tf.GPUOptions(allow_growth=True)
-tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+#gpu_options = tf.GPUOptions(allow_growth=True)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+tf.enable_eager_execution()
 
 '''
 All parameters and hyperparameters
@@ -32,7 +34,7 @@ class Configuration:
         '''
         Encoder
         '''
-        self.history_length = 5
+        self.history_length = 10
         self.batch_size = None
         #for ms-pacman
         self.enc_units = self.option_dim
@@ -63,7 +65,7 @@ class Configuration:
 
         self.output_dim_De = self.n_actions + 1
 
-        self.max_n_decoding = 3
+        self.max_n_decoding = 10
 
         '''
         Trainer
