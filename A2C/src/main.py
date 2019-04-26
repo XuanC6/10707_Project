@@ -9,8 +9,10 @@ import tensorflow as tf
 from trainer import Trainer
 from config import Configuration
 
-gpu_options = tf.GPUOptions(allow_growth=True)
-tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+#gpu_options = tf.GPUOptions(allow_growth=True)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+tf.enable_eager_execution()
 
 '''
 Execute training

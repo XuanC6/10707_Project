@@ -13,8 +13,10 @@ import matplotlib.pyplot as plt
 
 from model import Encoder, Option_Encoder, Critic, Decoder
 
-gpu_options = tf.GPUOptions(allow_growth=True)
-tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+#gpu_options = tf.GPUOptions(allow_growth=True)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
+tf.enable_eager_execution()
 
 '''
 Interact with the environment
@@ -200,7 +202,7 @@ class Trainer:
                 plan = self.encoder(tf.expand_dims(np.array(state_history, dtype=np.float32), 0))
                 replan = False
 
-            states = self.decoder(action_onehot, plan)
+            plan = self.decoder(action_onehot, plan)
             step_this_option += 1
             
             # if train:
