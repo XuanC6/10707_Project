@@ -3,6 +3,7 @@ from collections import deque
 import os
 import sys
 import random
+import csv
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
@@ -67,6 +68,7 @@ class Trainer:
         self.weight_cr_path = config.weight_cr_path 
         self.weight_de_path = config.weight_de_path
         self.log_path = config.log_path
+        self.train_log_path = config.train_log_path
 
         self.restore = restore
 
@@ -95,19 +97,29 @@ class Trainer:
             self.test(self.n_test_episodes)
             self.save_logs()
 
-            print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
         
         if os.path.isfile(self.log_path) and self.restore:
-            train_logs = np.load(self.log_path)
+            eval_logs = np.load(self.log_path)
 
-            self.n_episodes = train_logs["n_episodes"]
-            self.test_episodes = train_logs["test_episodes"]
-            self.test_reward_means = train_logs["test_reward_means"]
-            self.test_reward_stds = train_logs["test_reward_stds"]
-            self.test_lifetime_means = train_logs["test_lifetime_means"]
-            self.test_lifetime_stds =train_logs["test_lifetime_stds"]
+            self.n_episodes = eval_logs["n_episodes"]
+            self.test_episodes = eval_logs["test_episodes"]
+            self.test_reward_means = eval_logs["test_reward_means"]
+            self.test_reward_stds = eval_logs["test_reward_stds"]
+            self.test_lifetime_means = eval_logs["test_lifetime_means"]
+            self.test_lifetime_stds =eval_logs["test_lifetime_stds"]
+
+        train_log = open(self.train_log_path, 'a', newline='')
+        train_log_writer = csv.writer(train_log)
+
+        if not self.restore:
+            csv_header = ["episode", "actor_loss", "critic_loss", "mean_entropy", "num_steps", "replan_times", "reward"]
+            train_log_writer.writerow(csv_header)
+
+            
+        print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
 
         while True:
+
             self.n_episodes += 1
             if self.n_episodes > self.max_episodes:
                 break
@@ -143,6 +155,8 @@ class Trainer:
             del tape
             
             print(self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards), sep='\t')
+            train_log_writer.writerow([self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards)])
+            train_log.flush()
             
             # Save data or do test
             if self.n_episodes % self.save_interval == 0:
@@ -212,13 +226,12 @@ class Trainer:
             #     action = np.argmax(np.squeeze(self.decoder.scores.numpy()))
 
             # avoid replanning forever
-            while True:
-                action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
+            if step_this_option == 1:
+                action_tensor = tf.squeeze(tf.random.categorical(tf.log([self.decoder.logits[0][:-1]]), 1))
                 action = action_tensor.numpy()
-                if step_this_option == 1 and action == self.config.n_actions:
-                    continue
-                else:
-                    break
+            else:
+                action_tensor = tf.squeeze(tf.random.categorical(tf.log(self.decoder.logits), 1))
+                action = action_tensor.numpy()
 
             ##
             if action == self.config.n_actions or step_this_option > self.config.max_n_decoding:
