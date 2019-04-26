@@ -196,7 +196,7 @@ class Trainer:
             self.env.render()
         
         while True:
-            if replan:
+            if True:
                 replan_times += 1
                 #states = self.option_encoder([obs])
                 plan = self.encoder(tf.expand_dims(np.array(state_history, dtype=np.float32), 0))
@@ -204,7 +204,7 @@ class Trainer:
 
             plan = self.decoder(action_onehot, plan)
             step_this_option += 1
-            
+
             # if train:
             #     action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
             #     action = action_tensor.numpy()
@@ -212,21 +212,9 @@ class Trainer:
             #     action = np.argmax(np.squeeze(self.decoder.scores.numpy()))
 
             # avoid replanning forever
-            while True:
-                action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
-                action = action_tensor.numpy()
-                if step_this_option == 1 and action == self.config.n_actions:
-                    continue
-                else:
-                    break
-
+            action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
+            action = action_tensor.numpy()
             ##
-            if action == self.config.n_actions or step_this_option > self.config.max_n_decoding:
-                replan = True
-                step_this_option = 0
-                continue
-            ##
-
             state_value_tensor = self.critic([obs])
 
             action_onehot = tf.one_hot([action], self.config.output_dim_De)

@@ -63,7 +63,7 @@ class Configuration:
         self.dense_activations_De = ["elu"] * len(self.dense_dims_De)
         self.dense_initializer_De = "he_normal"
 
-        self.output_dim_De = self.n_actions + 1
+        self.output_dim_De = self.n_actions
 
         self.max_n_decoding = 10
 
