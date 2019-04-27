@@ -23,10 +23,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='707 Project')
     parser.add_argument("action", type = str,
                         choices=["train", "continue", "test"])
-    parser.add_argument("--num_episodes", type = int, default = 100)
+    parser.add_argument("--num_episodes", type=int, default=100)
+    parser.add_argument("--base_dir", type=str, default=None)
     args = parser.parse_args()
 
-    Config = Configuration()
+    Config = Configuration(base_dir=args.base_dir)
     if args.action == "train":
         MyTrainer = Trainer(Config, restore = False)
         MyTrainer.train()
