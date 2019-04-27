@@ -2,6 +2,7 @@
 import os
 import gym
 import tensorflow as tf
+import pprint
 from datetime import datetime
 
 #gpu_options = tf.GPUOptions(allow_growth=True)
@@ -15,8 +16,12 @@ All parameters and hyperparameters
 
 class Configuration:
 
-    def __init__(self):
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + '/' + str(datetime.now()) + '/'
+    def __init__(self, base_dir=None):
+
+        if not base_dir:
+            self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + '/' + str(datetime.now()) + '/'
+        else:
+            self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + '/' + base_dir + '/'
 
         self.env = gym.make("MsPacman-ram-v0")
         self.use_vision = False
@@ -128,4 +133,8 @@ class Configuration:
         self.log_dir = os.path.join(self.base_dir, "logs")
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        self.log_path = self.log_dir + '/train_logs.npz'
+        self.log_path = self.log_dir + '/eval_logs.npz'
+        self.train_log_path = self.log_dir + '/train_log.csv'
+
+        with open(self.log_dir + '/config', 'w') as config_file:
+            pprint.pprint(self.__dict__, config_file)
