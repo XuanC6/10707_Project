@@ -1,3 +1,4 @@
+*.pem
 coinrun/saved_models
 coinrun/files_not_used
 coinrun/assets

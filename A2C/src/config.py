@@ -6,10 +6,12 @@ import pprint
 from datetime import datetime
 
 #gpu_options = tf.GPUOptions(allow_growth=True)
+config = tf.ConfigProto()
+config.intra_op_parallelism_threads = 0
+config.inter_op_parallelism_threads = 0
 #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
-#tf.enable_eager_execution(config=tf.ConfigProto(gpu_options=gpu_options))
-tf.enable_eager_execution()
-
+tf.enable_eager_execution(config=config)
+#
 '''
 All parameters and hyperparameters
 '''

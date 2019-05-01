@@ -1,0 +1,67 @@
+{'N_compute_returns': 50,
+ 'base_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+             '15:56:49.164592/',
+ 'batch_size': None,
+ 'channels': 3,
+ 'conv_dims': None,
+ 'convnet_kind': 'small',
+ 'dense_activations_Cr': ['elu', 'elu', 'elu'],
+ 'dense_activations_De': ['elu', 'elu'],
+ 'dense_activations_OE': ['elu', 'elu', 'elu'],
+ 'dense_dims_Cr': [512, 512, 512],
+ 'dense_dims_De': [256, 256],
+ 'dense_dims_OE': [512, 512, 512],
+ 'dense_initializer_Cr': 'he_normal',
+ 'dense_initializer_De': 'he_normal',
+ 'dense_initializer_OE': 'he_normal',
+ 'enc_units': 256,
+ 'entropy_coeff': 0.01,
+ 'env': <TimeLimit<AtariEnv<MsPacman-ram-v0>>>,
+ 'filters': None,
+ 'gamma': 0.99,
+ 'height': 210,
+ 'history_length': 10,
+ 'input_length': 128,
+ 'kernel': None,
+ 'log_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+            '15:56:49.164592/logs',
+ 'log_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+             '15:56:49.164592/logs/eval_logs.npz',
+ 'lr_actor': 0.0001,
+ 'lr_critic': 0.001,
+ 'max_episodes': 10000,
+ 'max_n_decoding': 10,
+ 'momentum': 0.95,
+ 'n_actions': 9,
+ 'n_test_episodes': 10,
+ 'optimizer_actor': <tensorflow.python.training.adam.AdamOptimizer object at 0xb3844d908>,
+ 'optimizer_critic': <tensorflow.python.training.adam.AdamOptimizer object at 0xb3838c7b8>,
+ 'option_dim': 256,
+ 'output_dim_De': 9,
+ 'pic_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+            '15:56:49.164592/pic',
+ 'render_when_test': False,
+ 'render_when_train': False,
+ 'save_interval': 50,
+ 'test_interval': 50,
+ 'train_log_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                   '15:56:49.164592/logs/train_log.csv',
+ 'units': 256,
+ 'use_vision': False,
+ 'weight_cr_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                  '15:56:49.164592/weight_critic',
+ 'weight_cr_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                   '15:56:49.164592/weight_critic/saved_weights.ckpt',
+ 'weight_de_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                  '15:56:49.164592/weight_decoder',
+ 'weight_de_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                   '15:56:49.164592/weight_decoder/saved_weights.ckpt',
+ 'weight_enc_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                   '15:56:49.164592/weight_encoder',
+ 'weight_enc_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                    '15:56:49.164592/weight_encoder/saved_weights.ckpt',
+ 'weight_oe_dir': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                  '15:56:49.164592/weight_option_encoder',
+ 'weight_oe_path': '/Users/wangdong/Dropbox/Courses/10707/project/STRAWe/2019-05-01 '
+                   '15:56:49.164592/weight_option_encoder/saved_weights.ckpt',
+ 'width': 160}
