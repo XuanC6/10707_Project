@@ -65,7 +65,7 @@ class Trainer:
 
         self.weight_enc_path = config.weight_enc_path
         self.weight_oe_path = config.weight_oe_path
-        self.weight_cr_path = config.weight_cr_path 
+        self.weight_cr_path = config.weight_cr_path
         self.weight_de_path = config.weight_de_path
         self.log_path = config.log_path
         self.train_log_path = config.train_log_path
@@ -97,7 +97,7 @@ class Trainer:
             self.test(self.n_test_episodes)
             self.save_logs()
 
-        
+
         if os.path.isfile(self.log_path) and self.restore:
             eval_logs = np.load(self.log_path)
 
@@ -115,7 +115,7 @@ class Trainer:
             csv_header = ["episode", "actor_loss", "critic_loss", "mean_entropy", "num_steps", "replan_times", "reward"]
             train_log_writer.writerow(csv_header)
 
-            
+
         print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
 
         while True:
@@ -153,11 +153,11 @@ class Trainer:
             self.optimizer_critic.apply_gradients(zip(grads_critic, self.critic.variables))
 
             del tape
-            
+
             print(self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards), sep='\t')
             train_log_writer.writerow([self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards)])
             train_log.flush()
-            
+
             # Save data or do test
             if self.n_episodes % self.save_interval == 0:
                 # self.agent.save_weights(self.weight_path)
@@ -165,7 +165,7 @@ class Trainer:
                 self.encoder.save_weights(self.weight_enc_path)
                 self.critic.save_weights(self.weight_cr_path)
                 self.decoder.save_weights(self.weight_de_path)
-                
+
             if self.n_episodes % self.test_interval == 0:
                 print()
                 print(datetime.now())
@@ -173,7 +173,7 @@ class Trainer:
                 self.save_logs()
 
                 print("episode, actor_loss, critic_loss, mean_entropy, num_steps, replan_times, reward")
-            
+
         print(datetime.now())
         print('training finished')
         # self.agent.save_weights(self.weight_path)
@@ -208,7 +208,7 @@ class Trainer:
 
         if render:
             self.env.render()
-        
+
         while True:
             if True:
                 replan_times += 1
@@ -226,7 +226,7 @@ class Trainer:
             #     action = np.argmax(np.squeeze(self.decoder.scores.numpy()))
 
             # avoid replanning forever
-            action_tensor = tf.squeeze(tf.random.categorical(tf.log(self.decoder.logits), 1))
+            action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
             action = action_tensor.numpy()
             state_value_tensor = self.critic([obs])
             action_onehot = tf.one_hot([action], self.config.output_dim_De)
@@ -247,7 +247,7 @@ class Trainer:
 
             obs = self.preprocess_observation(next_obs)
             state_history.append(obs)
-            
+
             if done:
                 break
 
@@ -260,11 +260,11 @@ class Trainer:
         T = len(rewards)
         returns = np.zeros((T))
         return_G = 0
-        
+
         for t in reversed(range(T)):
             return_G = rewards[t] + self.gamma * return_G
             returns[t] = return_G
-            
+
         return returns
 
 
@@ -272,9 +272,9 @@ class Trainer:
         # compute the return G(N_step)
         T = len(rewards)
         returns = np.zeros((T))
-        
+
         for t in reversed(range(T)):
-            
+
             if t + self.N_compute_returns >= T:
                 Vend = 0
             else:
@@ -289,12 +289,12 @@ class Trainer:
                 signal += (self.gamma**k) * reward
 
             returns[t] = signal + (self.gamma**self.N_compute_returns) * Vend
-            
+
         return returns
 
 
     def test(self, n_test_episodes):
-        # run certain test episodes on current policy, 
+        # run certain test episodes on current policy,
         # recording the mean/std of the cumulative reward.
         total_rewards = []
         lifetimes = []
@@ -302,7 +302,7 @@ class Trainer:
             rewards, _, _, _, _, n_steps, _ = self.generate_episode(self.render_when_test, train = False)
             total_rewards.append(np.sum(rewards))
             lifetimes.append(n_steps)
-            
+
         total_rewards = np.asarray(total_rewards)
         reward_mean = np.mean(total_rewards)
         reward_std = np.std(total_rewards)
@@ -310,7 +310,7 @@ class Trainer:
         lifetimes = np.asarray(lifetimes)
         lifetime_mean = np.mean(lifetimes)
         lifetime_std =  np.std(lifetimes)
-        
+
         print('episodes completed:', self.n_episodes)
         print('test reward mean over {} episodes:'.format(n_test_episodes), reward_mean)
         print('test reward std:', reward_std)
@@ -318,7 +318,7 @@ class Trainer:
         print('test lifetime mean over {} episodes:'.format(n_test_episodes), lifetime_mean)
         print('test lifetime std:', lifetime_std)
         print('')
-        
+
         self.test_episodes = np.append(self.test_episodes, self.n_episodes)
 
         self.test_reward_means = np.append(self.test_reward_means, reward_mean)
