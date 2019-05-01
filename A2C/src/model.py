@@ -206,6 +206,6 @@ class Decoder(tf.keras.Model):
         self.logits = self.output_layer(hidden)
         self.scores = tf.nn.softmax(self.logits)
         # self.action_tensor = tf.squeeze(tf.random.categorical(logits, 1))
-        self.actions_entropy = -tf.reduce_sum(self.scores  * tf.math.log(self.scores))
+        self.actions_entropy = -tf.reduce_sum(self.scores  * tf.math.log(self.scores + 1e-8))
 
         return new_states

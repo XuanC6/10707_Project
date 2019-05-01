@@ -74,7 +74,7 @@ class Trainer:
 
         self.weights_initialized = False
         print(datetime.now())
-        if os.path.isfile(self.weight_oe_path + '.index') and self.restore:
+        if os.path.isfile(self.weight_cr_path + '.index') and self.restore:
             # self.agent.load_weights(self.weight_path)
             #self.option_encoder.load_weights(self.weight_oe_path)
             self.encoder.load_weights(self.weight_enc_path)
@@ -142,7 +142,7 @@ class Trainer:
                 entropy_mean = tf.reduce_mean(entropys)
                 loss_entropy = -self.config.entropy_coeff * entropy_mean
 
-                loss_actor = -tf.reduce_mean((returns - state_values) * tf.log(action_scores)) + loss_entropy
+                loss_actor = -tf.reduce_mean((returns - state_values) * tf.math.log(action_scores + 1e-8)) + loss_entropy
                 loss_critic =  tf.reduce_mean(tf.square(returns - state_value_tensors))
 
             actor_variables = self.encoder.variables + self.decoder.variables
@@ -151,12 +151,12 @@ class Trainer:
 
             grads_critic = tape.gradient(loss_critic, self.critic.variables)
             self.optimizer_critic.apply_gradients(zip(grads_critic, self.critic.variables))
-
-            del tape
             
             print(self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards), sep='\t')
             train_log_writer.writerow([self.n_episodes, loss_actor.numpy(), loss_critic.numpy(), entropy_mean.numpy(), n_steps, replan_times, np.sum(rewards)])
             train_log.flush()
+
+            del tape
             
             # Save data or do test
             if self.n_episodes % self.save_interval == 0:
@@ -165,7 +165,7 @@ class Trainer:
                 self.encoder.save_weights(self.weight_enc_path)
                 self.critic.save_weights(self.weight_cr_path)
                 self.decoder.save_weights(self.weight_de_path)
-                
+
             if self.n_episodes % self.test_interval == 0:
                 print()
                 print(datetime.now())
@@ -227,18 +227,13 @@ class Trainer:
 
             # avoid replanning forever
             if step_this_option == 1:
-                action_tensor = tf.squeeze(tf.random.categorical(tf.log([self.decoder.logits[0][:-1]]), 1))
+                logits = self.decoder.logits[0]
+                action_tensor = tf.squeeze(tf.random.categorical([logits[:-1]], 1))
                 action = action_tensor.numpy()
             else:
-                action_tensor = tf.squeeze(tf.random.categorical(tf.log(self.decoder.logits), 1))
+                action_tensor = tf.squeeze(tf.random.categorical(self.decoder.logits, 1))
                 action = action_tensor.numpy()
 
-            ##
-            if action == self.config.n_actions or step_this_option > self.config.max_n_decoding:
-                replan = True
-                step_this_option = 0
-                continue
-            ##
 
             state_value_tensor = self.critic([obs])
 
@@ -246,6 +241,16 @@ class Trainer:
             action_score = tf.reduce_sum(self.decoder.scores*action_onehot)
             state_value = state_value_tensor.numpy()
             entropy_tensor = self.decoder.actions_entropy
+
+            if action == self.config.n_actions or step_this_option > self.config.max_n_decoding:
+                replan = True
+                step_this_option = 0
+                rewards.append(0.0)
+                action_scores.append(action_score)
+                state_value_tensors.append(state_value_tensor)
+                state_values.append(state_value)
+                entropys.append(entropy_tensor)
+                continue
 
             n_steps += 1
             next_obs, reward, done, _ = self.env.step(action)

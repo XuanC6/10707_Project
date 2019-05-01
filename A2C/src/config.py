@@ -39,7 +39,7 @@ class Configuration:
         '''
         Encoder
         '''
-        self.history_length = 10
+        self.history_length = 5
         self.batch_size = None
         #for ms-pacman
         self.enc_units = self.option_dim
